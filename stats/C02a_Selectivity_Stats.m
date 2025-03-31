@@ -1,0 +1,129 @@
+close all
+clear all
+clc
+
+% Description:
+% This script corresponds to Analysis B - The effect of beta, type, and layer 
+% on rs-FC - and to Figure 3 of the manuscript. The data is averaged over 
+% hemispheres and distances. 
+% First, an rm ANOVA is computed to assess the effects of beta squares (1-3 to
+% 1-3, 4-7 to 4-7, 8-10 to 8-10).
+% Then an rmANOVA is computed to assess the effects of beta diagonal (1 to 1, ...)
+% Third, an rmAONVA is computed to assess the effects of cumulative beta (1-2 to 1-2,
+% 1-4 to 1-4, 1-6 to 1-6, 1-8 to 1-8, 1-10 to 1-10).
+% Lastly, an LME is fitted to account for the hierarchical structure of the data.
+
+%% Load the data
+
+Root = '/space/ardebil/1/users/Others/Marianna/FC_7T_Coronal/Controls/Results';
+
+Label = 'V1';
+Layers = {'0-2', '4-6', '8-10'};
+Sbjs = {'aman', 'arak', 'aroo', 'atib', 'auil', 'chss', 'evad', 'haas', 'rcgr', 'ylri', 'imyy'};
+
+saveTables = 1;
+currentDate = datestr(now, 'yyyy-mm-dd');
+savePath = ['/space/ardebil/1/users/Others/Marianna/FC_7T_Coronal/Controls/Figures/Figure_3/' currentDate '/'];
+if saveTables 
+    mkdir(savePath);
+end
+
+%% load data
+
+for Layer = 1:length(Layers)
+
+    for Sbj = 1:length(Sbjs)
+
+        load([Root,  '/', [Label, '_layers_', Layers{Layer}, '_intrahemispheric/'], Sbjs{Sbj},'/CorrelationMtx_Selectivity_subsampled_1.mat']);
+            
+        % 10     4     2    10    10     2
+        % Distance, Alike_both/alike_Eye1/alike_Eye2/Unalike (1), Hemi, Beta1, Beta2, z(2)
+
+        % Assign the data for the 'Alike' condition (both eyes)
+        DATA_ALIKE(Sbj, :, Layer, :, :, :) = Data_Combined(:, 1, :, :, :, 2); % take righ2right, left2left, and z-value
+
+        % Assign the data for the 'Unalike' condition (different eyes)
+        DATA_UNALIKE(Sbj, :, Layer, :, :, :) = Data_Combined(:, 4, :, :, :, 2); % take righ2left, and z-value
+
+        % Compute the difference between Alike and Unalike conditions
+        DATA_DIFF(Sbj, :, Layer, :, :, :) = DATA_ALIKE(Sbj, :, Layer, :, :, :) - DATA_UNALIKE(Sbj, :, Layer, :, :, :);
+        clear Data_Combined
+
+    end
+
+end
+
+
+% size: 11        10          3         2            10    10
+%       subjecs   distances   layers    hemispheres  beta1 beta2
+
+% mean over distances and hemispheres
+DATA_ALIKE_mean = squeeze(mean(mean(DATA_ALIKE, 4), 2));
+DATA_UNALIKE_mean = squeeze(mean(mean(DATA_UNALIKE, 4), 2));
+
+
+%% rmANOVA for cumulative beta
+
+STATS = [
+    mean(mean(DATA_ALIKE_mean(:,1,1:2,1:2),3),4) mean(mean(DATA_ALIKE_mean(:,2,1:2,1:2),3),4) mean(mean(DATA_ALIKE_mean(:,3,1:2,1:2),3),4)...
+    mean(mean(DATA_ALIKE_mean(:,1,1:4,1:4),3),4) mean(mean(DATA_ALIKE_mean(:,2,1:4,1:4),3),4) mean(mean(DATA_ALIKE_mean(:,3,1:4,1:4),3),4)...
+    mean(mean(DATA_ALIKE_mean(:,1,1:6,1:6),3),4) mean(mean(DATA_ALIKE_mean(:,2,1:6,1:6),3),4) mean(mean(DATA_ALIKE_mean(:,3,1:6,1:6),3),4)...
+    mean(mean(DATA_ALIKE_mean(:,1,1:8,1:8),3),4) mean(mean(DATA_ALIKE_mean(:,2,1:8,1:8),3),4) mean(mean(DATA_ALIKE_mean(:,3,1:8,1:8),3),4)...
+    mean(mean(DATA_ALIKE_mean(:,1,1:10,1:10),3),4) mean(mean(DATA_ALIKE_mean(:,2,1:10,1:10),3),4) mean(mean(DATA_ALIKE_mean(:,3,1:10,1:10),3),4)...
+    mean(mean(DATA_UNALIKE_mean(:,1,1:2,1:2),3),4) mean(mean(DATA_UNALIKE_mean(:,2,1:2,1:2),3),4) mean(mean(DATA_UNALIKE_mean(:,3,1:2,1:2),3),4)...
+    mean(mean(DATA_UNALIKE_mean(:,1,1:4,1:4),3),4) mean(mean(DATA_UNALIKE_mean(:,2,1:4,1:4),3),4) mean(mean(DATA_UNALIKE_mean(:,3,1:4,1:4),3),4)...
+    mean(mean(DATA_UNALIKE_mean(:,1,1:6,1:6),3),4) mean(mean(DATA_UNALIKE_mean(:,2,1:6,1:6),3),4) mean(mean(DATA_UNALIKE_mean(:,3,1:6,1:6),3),4)...
+    mean(mean(DATA_UNALIKE_mean(:,1,1:8,1:8),3),4) mean(mean(DATA_UNALIKE_mean(:,2,1:8,1:8),3),4) mean(mean(DATA_UNALIKE_mean(:,3,1:8,1:8),3),4)...
+    mean(mean(DATA_UNALIKE_mean(:,1,1:10,1:10),3),4) mean(mean(DATA_UNALIKE_mean(:,2,1:10,1:10),3),4) mean(mean(DATA_UNALIKE_mean(:,3,1:10,1:10),3),4)...
+    ];
+
+ts = arrayfun(@(x) sprintf('t%d', x), 1:30, 'UniformOutput', false);
+
+t =array2table(STATS,'VariableNames', ts);
+
+within = table(...
+    repmat({'A'; 'B'; 'C'}, 10, 1), ... % 30 repetitions of 'A', 'B', 'C'
+    repmat({'AA'; 'AA'; 'AA'; 'BB'; 'BB'; 'BB'; 'CC'; 'CC'; 'CC'; 'DD'; 'DD'; 'DD'; 'EE'; 'EE'; 'EE'}, 2, 1), ... % 2 repetitions of beta group
+    [repmat({'AAA'}, 15, 1); repmat({'BBB'}, 15, 1)], ... % 'AAA' for first 30 rows, 'BBB' for next 30 rows
+    'VariableNames', {'Layer', 'Beta', 'Type'});
+
+% fit rmANOVA
+rm = fitrm(t,'t1-t30~1','WithinDesign',within)
+disp('Comparison between beta (cumulative) & layer & type in V1 - averaged over hemispheres, distances')
+ranovatbl = ranova(rm,'WithinModel','Layer+Beta+Type+Layer*Type+Layer*Beta+Beta*Layer+Beta*Type+Beta*Type*Layer')
+
+if saveTables
+    writetable(ranovatbl, [savePath 'V1_anova_cum.xlsx'], 'WriteRowNames', true);
+end
+
+%% LME, mean over distances, exclude lower triangle
+
+% mean over distances
+DATA_ALIKE_mean = squeeze(mean(DATA_ALIKE, 2));
+DATA_UNALIKE_mean = squeeze(mean(DATA_UNALIKE, 2));
+
+DATA(:,:,:,:,:,1) = DATA_UNALIKE_mean;
+DATA(:,:,:,:,:,2) = DATA_ALIKE_mean;
+
+% exclude lower triangle
+sz = size(DATA);
+Mask = true(sz) & permute(triu(true(sz(4:5))), [3 4 5 1 2 6]);
+
+% prepare variables for lmw
+sizeInd = arrayfun(@(s) 1:s, size(DATA), 'UniformOutput', false);
+[Subject, Layer, Hemi, BQ1, BQ2, TypeODC] = ndgrid(sizeInd{:});
+[Subject, Layer, Hemi, TypeODC] = deal(categorical(Subject), categorical(Layer), categorical(Hemi), categorical(TypeODC));
+prodBQ = BQ1 .* BQ2;
+
+T = table(DATA(Mask), Subject(Mask), Layer(Mask), Hemi(Mask), prodBQ(Mask), TypeODC(Mask), 'VariableNames', {'rsFC', 'Subject', 'Layer', 'Hemi', 'prodBQ', 'TypeODC'});
+
+% fit the model
+lme = fitlme(T, 'rsFC ~ prodBQ*Layer*TypeODC + (1|Subject)');
+lme
+
+if saveTables
+    [xx, xxx, Coefficients] = fixedEffects(lme, 'Alpha', 0.05);
+    resultsTable = table(lme.CoefficientNames', Coefficients.Estimate, Coefficients.SE, Coefficients.tStat, Coefficients.DF, Coefficients.pValue, Coefficients.Upper, Coefficients.Lower, ...
+                     'VariableNames', {'Name', 'Estimate', 'SE', 'tStat', 'DF', 'pValue', 'Upper', 'Lower'});
+    writetable(resultsTable, [savePath 'V1_lme.xlsx']);
+end
