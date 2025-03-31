@@ -3,6 +3,9 @@
 """
 Created on Sat Jan 18 10:50:46 2025
 
+This script corresponds to Analysis 1 - the effect of distance and ocular polarity
+on rs-FC and selectivity. It is generating Figure 2 for the manuscript.
+
 @author: ms1454
 """
 

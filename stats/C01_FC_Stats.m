@@ -3,7 +3,7 @@ clear all
 clc
 
 % Description:
-% This script corresponds to Analysis A - The effect of distance (& type) on 
+% This script corresponds to Analysis 1 - The effect of distance (& type) on 
 % rs-FC and selectivity and to Figure 2 of the manuscript.
 % For this version, I used data that was radially smoothed over layers 0-10, 
 % with a data matrix that was subsampled to match distance distributions of

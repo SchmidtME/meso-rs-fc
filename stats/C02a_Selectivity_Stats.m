@@ -3,13 +3,10 @@ clear all
 clc
 
 % Description:
-% This script corresponds to Analysis B - The effect of beta, type, and layer 
+% This script corresponds to Analysis 2 - The effect of beta, type, and layer 
 % on rs-FC - and to Figure 3 of the manuscript. The data is averaged over 
 % hemispheres and distances. 
-% First, an rm ANOVA is computed to assess the effects of beta squares (1-3 to
-% 1-3, 4-7 to 4-7, 8-10 to 8-10).
-% Then an rmANOVA is computed to assess the effects of beta diagonal (1 to 1, ...)
-% Third, an rmAONVA is computed to assess the effects of cumulative beta (1-2 to 1-2,
+% First, an rmAONVA is computed to assess the effects of cumulative beta (1-2 to 1-2,
 % 1-4 to 1-4, 1-6 to 1-6, 1-8 to 1-8, 1-10 to 1-10).
 % Lastly, an LME is fitted to account for the hierarchical structure of the data.
 

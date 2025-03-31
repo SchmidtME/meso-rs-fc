@@ -3,6 +3,10 @@
 """
 Created on Thu Dec 12 15:33:39 2024
 
+This script corresponds to Analysis 2 - the effect of cortical depth, ODI and
+ocular polarity on rs-FC and selectivity. It creates Figure 3 oof the 
+manuscript. 
+
 @author: ms1454
 """
 
