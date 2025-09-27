@@ -1,75 +1,125 @@
-clc
 close all
 clear all
+clc
 
-%% Specifications
-
-% Define the base directory where the subject folders are stored
-baseDirectory = '/space/ardebil/1/users/Others/Marianna/FC_7T_Coronal/Controls/Results';
-% subjects
-subNames = {'aman', 'ylri', 'auil', 'arak', 'aroo', 'atib', 'imyy', 'chss', 'evad', 'haas', 'rcgr'};
-domEye = {'LE', 'RE', 'RE', 'RE', 'LE', 'RE', 'RE', 'RE', 'RE', 'RE', 'RE'};
-layers = {'0-2'};
-hemis = {'lh', 'rh'};
+%%
 
 saveFigures = 1;
 if saveFigures
     currentDate = datestr(now, 'yyyy-mm-dd');
-    saveDir = sprintf('/space/ardebil/1/users/Others/Marianna/FC_7T_Coronal/Controls/Figures/Figure_11/%s', currentDate);
+    saveDir = sprintf('/space/ardebil/1/users/Others/Marianna/FC_7T_Coronal/Controls/Figures/Supplementary/Figure_4/%s', currentDate);
     mkdir(saveDir);
 end
 
-%% Load data
+saveDir_data = '/space/ardebil/1/users/Others/Marianna/FC_7T_Coronal/Controls/Figure_S4_right_plot_data';
+mkdir(saveDir_data);
 
-% Initialize cell array to store distances for 10x10 beta quantiles for all subjects
-data_DE = zeros(length(subNames),length(layers),length(hemis),1);
-data_NDE = zeros(length(subNames),length(layers),length(hemis),1);
+Dest_Folder = ['/autofs/space/ardebil_002/users/Shahin/Stereopsis_Upsampled/Codes/Paper/Stereo_Deficiency/Graphs/', date]; %mkdir(Dest_Folder)
+ErrobarPlots = 0; MK_SIZE = 10; LN_SIZE = 4;
 
-for n = 1:length(subNames)
-    for l = 1:length(layers)
-        for h = 1:length(hemis)
+addpath('/autofs/space/ardebil_002/users/Shahin/Stereopsis_Upsampled/Codes')
+Sbj = {'ylri', 'aroo', 'auil', 'aman', 'arak', 'imyy', 'evad', 'chss', 'haas', 'atib', 'rcgr', ...
+       'myla', };                            % SD
 
-            subjectDir = fullfile(baseDirectory, ['V1_layers_' layers{l} '_intrahemispheric'], subNames{n});
-            matFilePath = fullfile(subjectDir, 'CorrelationMtx_Selectivity_Params.mat');
-            data = load(matFilePath, 'AnalysisParam');
-            
-            if strcmp(domEye{n}, 'RE')
-                data_DE(n,l,h,:) = data.AnalysisParam.median_beta_eye1{h};
-                data_NDE(n,l,h,:) = data.AnalysisParam.median_beta_eye2{h};
-            else
-                data_NDE(n,l,h,:) = data.AnalysisParam.median_beta_eye1{h};
-                data_DE(n,l,h,:) = data.AnalysisParam.median_beta_eye2{h};
-            end
-        end
-    end
-end
 
-%% Averaging
+Sbj_Grp = {'Control', 'Control', 'Control', 'Control', 'Control', 'Control', 'Control', 'Control', 'Control', 'Control', 'Control',...
+    'Control'};      % anisometropic
 
-data_DE_mean = squeeze(mean(data_DE,3));
-data_NDE_mean = squeeze(mean(data_NDE,3));
+Excel_Add = '/autofs/space/ardebil_002/users/Shahin/Stereopsis_Upsampled/Demog/Patient_summary_fmri-amblyopia study.xlsx'
+Beh_Data = readtable(Excel_Add);
 
-%% ANOVA (for shifted version)
+Dom_Eye = {'R', 'L', 'R', 'L', 'R', 'R', 'R', 'R', 'R', 'R', 'R'...
+           'R'}                                                   % anisometropic
 
-STATS = abs([data_DE_mean data_NDE_mean]);
+Type = [1 1 1 1 1 1 1 1 1 1 1 ...calendar
+        2 ]        % anisometropic
 
-ts = arrayfun(@(x) sprintf('t%d', x), 1:2, 'UniformOutput', false);
-
-t =array2table(STATS,'VariableNames', ts);
-
-within = table(...
-    [{'A'; 'B'}], ... % effect of type
-    'VariableNames', {'Type'});
-
-rm = fitrm(t,'t1-t2~1','WithinDesign',within)
-disp('Comparison of median beta in the masks for the DE and NDE')
-ranovatbl = ranova(rm,'WithinModel','Type')
+Anat_Address = '/autofs/space/ardebil_001/users/Shared/good_subjects_anat/'
+Func_Address = '/autofs/space/ardebil_002/users/Shahin/Stereopsis_Upsampled/'
+Hemis = {'rh', 'lh'}
+Labels = {'V1'}
+APPLY_ABS =1;
 
 %%
 
-[h,p] = ttest(STATS(:,1),STATS(:,2))
+for Lab = 1:length(Labels)
+    V1_Data = []
 
-%% plot
+    for Hemi = 1:2
+
+        for i=1:length(Sbj)
+
+            ADD = [Anat_Address, Sbj{i}, '_anat_upsample_B1justsub/label/High_Res_Upsampled/', Hemis{Hemi}, '.', Labels{Lab}, '_Upsampled_Adjusted2.label']
+            if ~exist(ADD)
+                ADD = [Anat_Address, Sbj{i}, '_anat_upsample_B1justsub/label/High_Res_Upsampled/', Hemis{Hemi}, '.', Labels{Lab}, '_Upsampled.label']
+            end
+
+            [num, mtx] = mris_read_label_Full(ADD);
+            Vertices = mtx(:, 1) + 1;
+    
+            if strcmp(Sbj_Grp{i} , 'Control')
+                ADD = [Func_Address, 'Subjects_', Sbj_Grp{i}, '_Upsampled/']
+            else
+                ADD = [Func_Address, 'Subjects_', Sbj_Grp{i}, '_Upsampled/']
+            end
+            
+            for ii=1:10
+                ADD2 = [ADD, Sbj{i}, num2str(ii), '/bold_Upsampled2/Stereopsis_TR3_Columnar_Smoothing_0-2.', Hemis{Hemi}, '/2D_R/cespct.nii.gz']
+                if ~exist(ADD2)
+                    break
+                end
+                H1 = load_nifti(ADD2);
+
+                ADD2 = [ADD, Sbj{i}, num2str(ii), '/bold_Upsampled2/Stereopsis_TR3_Columnar_Smoothing_0-2.', Hemis{Hemi}, '/2D_C/cespct.nii.gz']
+                if ~exist(ADD2)
+                    break
+                end
+                H2 = load_nifti(ADD2);
+
+                if strcmp(Dom_Eye{i}, 'L')
+                    TMP(ii, 1:2) = [nanmean((H1.vol(Vertices))) nanmean((H2.vol(Vertices)))];
+                else
+                    TMP(ii, 1:2) = [nanmean((H2.vol(Vertices))) nanmean((H1.vol(Vertices)))];
+                end
+
+            end
+    
+            if ii==1
+                ADD_temp = '/autofs/space/ardebil_002/users/Shahin/ODC/Subjects_Upsampled/';
+                Sess = dir([ADD_temp, Sbj{i}, '_red*'])
+                for ii=1:length(Sess)
+                    ADD2 = [ADD_temp, Sess(ii).name, '/bold_Upsampled2/ODC_Columnar_0-2.', Hemis{Hemi}, '/C1/cespct.nii.gz']                    
+                    H1 = load_nifti(ADD2);
+
+                    ADD2 = [ADD_temp, Sess(ii).name, '/bold_Upsampled2/ODC_Columnar_0-2.', Hemis{Hemi}, '/C2/cespct.nii.gz']
+                    H2 = load_nifti(ADD2);
+
+                    if strcmp(Dom_Eye{i}, 'L')
+                        TMP(ii, 1:2) = [nanmean((H1.vol(Vertices))) nanmean((H2.vol(Vertices)))];
+                    else
+                        TMP(ii, 1:2) = [nanmean((H2.vol(Vertices))) nanmean((H1.vol(Vertices)))];
+                    end
+                end
+            end
+            
+            tmp = nanmean(TMP)
+
+            V1_Data(i, 1:2, Hemi) = [tmp(2) tmp(1)];
+
+            % V1_Data
+            % % pause
+
+        end
+    end
+
+    V1_Data = mean(V1_Data, 3)
+end
+%%
+
+[h, p, a, stat] = ttest(V1_Data(:, 1), V1_Data(:, 2))
+
+%%
+
 
 figure('Position', [100, 100, 400, 400]); % Adjust figure size (width 600, height 400)
 hold on;
@@ -83,20 +133,20 @@ x_DE = 1 + offset;
 x_NDE = 1.6 + offset;  
 
 % Scatter plots with black outlines
-scatter(x_DE * ones(11, 1), abs(data_DE_mean), 100, 'k', 'filled', 'MarkerFaceColor', 'none', 'MarkerEdgeColor', 'k', 'LineWidth', 3); % Black outline for DE
-scatter(x_NDE * ones(11, 1), abs(data_NDE_mean), 100, [0.5 0.5 0.5], '^', 'filled', 'MarkerFaceColor', 'none', 'MarkerEdgeColor', [0.5 0.5 0.5], 'LineWidth', 3); % Grey outline for NDE
+scatter(x_DE * ones(12, 1), abs(V1_Data(:,1)), 100, 'k', 'filled', 'MarkerFaceColor', 'none', 'MarkerEdgeColor', 'k', 'LineWidth', 3); % Black outline for DE
+scatter(x_NDE * ones(12, 1), abs(V1_Data(:,2)), 100, [0.5 0.5 0.5], '^', 'filled', 'MarkerFaceColor', 'none', 'MarkerEdgeColor', [0.5 0.5 0.5], 'LineWidth', 3); % Grey outline for NDE
 
 % Plot lines connecting corresponding data points
-for i = 1:length(data_DE_mean)
-    plot([x_DE x_NDE], [abs(data_DE_mean(i)) abs(data_NDE_mean(i))], 'k-', 'LineWidth', 1);
+for i = 1:length(V1_Data(:,1))
+    plot([x_DE x_NDE], [abs(V1_Data(i,1)) abs(V1_Data(i,2))], 'k-', 'LineWidth', 1);
 end
 
 % Adjust the axes and labels
 xlim([0.8 2]); % Keep space to the left
-ylim([0.2 0.8]);
+ylim([2 5.5]);
 
 % Set y-ticks to just the min and max values
-set(gca, 'YTick', [0.2 0.8]);
+set(gca, 'YTick', [2 5.5]);
 
 % Corrected x-ticks for the new positions
 set(gca, 'XTick', [x_DE x_NDE], 'XTickLabel', {'DE', 'NDE'});
@@ -104,11 +154,16 @@ set(gca, 'LineWidth', 2); % Increase axis line width
 set(gcf,'renderer', 'painters'); 
 
 xlabel('Eye dominance');
-ylabel('Mean beta value');
+ylabel('Mean percent signal change');
 %title('Comparison of vertex counts for DE and NDE');
 
 hold off;
 
 if saveFigures
-    print([saveDir '/' 'Figure_11'], '-dtiff', '-r200');
+    print([saveDir '/Figure_4'], '-dtiff', '-r400');
 end
+
+%%
+
+writematrix(V1_Data, fullfile(saveDir_data, 'V1_Data.csv'));
+disp(['V1_Data saved to ' saveDir_data]);

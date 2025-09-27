@@ -7,15 +7,15 @@ clear all
 % Define the base directory where the subject folders are stored
 baseDirectory = '/space/ardebil/1/users/Others/Marianna/FC_7T_Coronal/Controls/Results';
 % subjects
-subNames = {'aman', 'ylri', 'auil', 'arak', 'aroo', 'atib', 'imyy', 'chss', 'evad', 'haas', 'rcgr'};
-domEye = {'LE', 'RE', 'RE', 'RE', 'LE', 'RE', 'RE', 'RE', 'RE', 'RE', 'RE'};
+subNames = {'myla', 'aman', 'ylri', 'auil', 'arak', 'aroo', 'atib', 'imyy', 'chss', 'evad', 'haas', 'rcgr'};
+domEye = {'RE','LE', 'RE', 'RE', 'RE', 'LE', 'RE', 'RE', 'RE', 'RE', 'RE', 'RE'};
 layers = {'0-2'};
 hemis = {'lh', 'rh'};
 
 saveFigures = 1;
 if saveFigures
     currentDate = datestr(now, 'yyyy-mm-dd');
-    saveDir = sprintf('/space/ardebil/1/users/Others/Marianna/FC_7T_Coronal/Controls/Figures/Figure_10/%s', currentDate);
+    saveDir = sprintf('/space/ardebil/1/users/Others/Marianna/FC_7T_Coronal/Controls/Figures/Supplementary/Figure_3/%s', currentDate);
     mkdir(saveDir);
 end
 
@@ -48,6 +48,14 @@ end
 
 data_DE_mean = squeeze(mean(data_DE,3));
 data_NDE_mean = squeeze(mean(data_NDE,3));
+
+%% Stats
+
+vertex_num = data_DE_mean + data_NDE_mean;
+vertex_num_1000 = (1000./vertex_num)*100;
+
+vertex_num_1000_mean = mean(vertex_num_1000);
+vertex_num_1000_sd = std(vertex_num_1000);
 
 %% ANOVA (for shifted version)
 
@@ -83,8 +91,8 @@ x_DE = 1 + offset;
 x_NDE = 1.6 + offset;  
 
 % Scatter plots with black outlines
-scatter(x_DE * ones(11, 1), data_DE_mean, 100, 'k', 'filled', 'MarkerFaceColor', 'none', 'MarkerEdgeColor', 'k', 'LineWidth', 3); % Black outline for DE
-scatter(x_NDE * ones(11, 1), data_NDE_mean, 100, [0.5 0.5 0.5], '^', 'filled', 'MarkerFaceColor', 'none', 'MarkerEdgeColor', [0.5 0.5 0.5], 'LineWidth', 3); % Grey outline for NDE
+scatter(x_DE * ones(12, 1), data_DE_mean, 100, 'k', 'filled', 'MarkerFaceColor', 'none', 'MarkerEdgeColor', 'k', 'LineWidth', 3); % Black outline for DE
+scatter(x_NDE * ones(12, 1), data_NDE_mean, 100, [0.5 0.5 0.5], '^', 'filled', 'MarkerFaceColor', 'none', 'MarkerEdgeColor', [0.5 0.5 0.5], 'LineWidth', 3); % Grey outline for NDE
 
 % Plot lines connecting corresponding data points
 for i = 1:length(data_DE_mean)
@@ -93,10 +101,10 @@ end
 
 % Adjust the axes and labels
 xlim([0.8 2]); % Keep space to the left
-ylim([2000 10000]);
+ylim([1500 10500]);
 
 % Set y-ticks to just the min and max values
-set(gca, 'YTick', [2000 10000]);
+set(gca, 'YTick', [1500 10500]);
 
 % Corrected x-ticks for the new positions
 set(gca, 'XTick', [x_DE x_NDE], 'XTickLabel', {'DE', 'NDE'});
@@ -110,5 +118,5 @@ ylabel('Vertex count');
 hold off;
 
 if saveFigures
-    print([saveDir '/' 'Figure_10'], '-dtiff', '-r200');
+    print([saveDir '/Figure_3'], '-dtiff', '-r400');
 end
