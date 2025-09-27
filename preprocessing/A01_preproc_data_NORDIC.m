@@ -33,11 +33,7 @@ for sub = 1:numel(name_subs)
     % Process each run for the current subject
     for run = 1:numel(runs{sub})
         % Define the path to the input magnitude image (subject-specific)
-        if name_subs{sub} == "chsB"
-            fn_mag = fullfile(dir_orig_data, "chss_2", 'bold_Close', runs{sub}{run}, 'f.nii');
-        elseif name_subs{sub} == "haaB"
-            fn_mag = fullfile('/autofs/space/ardebil_003/users/Shahin/HighRes_FC/FC_7T_Coronal/Sbjs_Adaptation_Upsampled/haas1/S01_P01/bold_Close_Upsampled2', runs{sub}{run}, 'f.nii.gz');
-        elseif name_subs{sub} == "rcgr"
+        if name_subs{sub} == "rcgr"
             fn_mag = fullfile(dir_orig_data, name_subs{sub}, 'rest', runs{sub}{run}, 'f.nii');
         else
             fn_mag = fullfile(dir_data, name_subs{sub}, 'bold_FLEET', runs{sub}{run}, 'f.nii');
