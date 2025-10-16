@@ -2,6 +2,10 @@ clc;
 close all;
 clear;
 
+% Description:
+% This script plots the median beta for each beta quantile.
+% Authors: Marianna Elisa Schmidt (marianna.schmidt@maxplanckschools.de)
+
 %% Specifications
 
 saveFigures = 0;

@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Created on Thu Dec 12 15:33:39 2024
+This script is plotting correlation matrices for rs-FC of alike ocular polarity
+vertex pairs, unalike ocular polarity vertex pairs, and selectivity for each
+cortical depth level. It corresponds to Figure 3 of the manuscript.
 
-@author: ms1454
+@author: Marianna Elisa Schmidt (marianna.schmidt@maxplanckschools.de)
 """
 
 import os

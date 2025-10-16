@@ -6,9 +6,9 @@ clc
 % This script corresponds to Analysis B - The effect of beta, type, and layer on interhemispheric
 % rs-FC and selectivity. This is the analysis comparing V1 subregions and corresponds to Figure 7
 % of the manuscript.
-% Differences between V1_Anterior (Peripheral V1) and V1_Posterior (Central V1) are assessed. 
-% First, an rm ANOVA is computed to assess the effects of beta, layer, ROI and type on rs-FC.
-% Then, an rm ANOVA is computed to assess the effects of beta, layer, and ROI on selectivity.
+% Differences between V1_Posterior (Cnetral) and V1_Anterior (Peripheral) are assessed. 
+% An rm ANOVA is computed to assess the effects of beta, layer, ROI and type on rs-FC.
+% Authors: Marianna E. Schmidt (marianna.schmidt@maxplanckschools.de), Iman Aganj, Shahin Nasr
 
 %% Load the data for V1 Anterior and Posterior
 
@@ -106,34 +106,4 @@ ranovatbl = ranova(rm,'WithinModel','Layer+ROI+Beta+Type+Layer*ROI+Layer*Beta+La
 
 if saveTables
     writetable(ranovatbl, [savePath 'CentVSPeri_anova_cum.xlsx'], 'WriteRowNames', true);
-end
-
-%% LME - Posterior vs. Anterior
-
-clear DATA
-% mean over distances not applicable
-DATA_ALIKE_mean = squeeze(DATA_ALIKE);
-DATA_UNALIKE_mean = squeeze(DATA_UNALIKE);
-
-DATA(:,:,:,:,:,1) = DATA_UNALIKE_mean;
-DATA(:,:,:,:,:,2) = DATA_ALIKE_mean;
-
-sz = size(DATA);
-Mask = true(sz) & permute(triu(true(sz(4:5))), [3 4 5 1 2 6]);
-
-sizeInd = arrayfun(@(s) 1:s, size(DATA), 'UniformOutput', false);
-[Subject, ROI, Layer, BQ1, BQ2, TypeODC] = ndgrid(sizeInd{:});
-[Subject, ROI, Layer, TypeODC] = deal(categorical(Subject), categorical(ROI), categorical(Layer), categorical(TypeODC));
-
-prodBQ = BQ1 .* BQ2;
-
-T = table(DATA(Mask), Subject(Mask), ROI(Mask), Layer(Mask), prodBQ(Mask), TypeODC(Mask), 'VariableNames', {'rsFC', 'Subject', 'ROI', 'Layer', 'prodBQ', 'TypeODC'});
-
-lme = fitlme(T, 'rsFC ~ prodBQ*Layer*TypeODC*ROI + (1|Subject)');
-
-if saveTables
-    [xx, xxx, Coefficients] = fixedEffects(lme, 'Alpha', 0.05);
-    resultsTable = table(lme.CoefficientNames', Coefficients.Estimate, Coefficients.SE, Coefficients.tStat, Coefficients.DF, Coefficients.pValue, Coefficients.Upper, Coefficients.Lower, ...
-                     'VariableNames', {'Name', 'Estimate', 'SE', 'tStat', 'DF', 'pValue', 'Upper', 'Lower'});
-    writetable(resultsTable, [savePath 'V1_CentVS_Peri_lme.xlsx']);
 end

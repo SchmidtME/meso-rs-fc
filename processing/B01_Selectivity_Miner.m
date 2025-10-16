@@ -5,20 +5,23 @@ clc
 warning('off', 'all');
 
 % Description:
-% This script corresponds to Analysis B - The effect of ocular preference strength (beta),
-% cortical depth, ROI (V1 subregions) (and type) on rs-FC (and selectivity).
-% It corresponds to Figures 3-5 of the manuscript.
-% This script runs subfunctions to calculate the rs-FC for each subject and at
-% different cortical depth in V1 and within and between subregions of V1. 
+% This script corresponds to Analysis A & B - The effect of distance, 
+% ocular preference strength (beta), cortical depth, ROI (V1 subregions)
+% on rs-FC (and selectivity).
+% It corresponds to Figures 2-7 of the manuscript.
+% This script runs subfunctions to calculate the rs-FC for each subject, at
+% different cortical depth in V1 and within and between subregions of V1 in
+% the left and right hemisphere or between the hemispheres. 
 % It specifies the input parameters to the subfunctions to run additional 
 % preprocessing (such as detrending and high-pass filtering), and to save the 
 % mean correlation for a number of distances and beta quantiles.
+% Authors: Marianna E. Schmidt (marianna.schmidt@maxplanckschools.de), Iman Aganj, Shahin Nasr
 
 %% specifications
 
 AnalysisParam.ROIpatch = "V1_patch.flat";
 sub2sub = 0; 
-AnalysisParam.ROI='V1_Posterior' % _Dorsal'; % V1, V2, V3, V4, V1_Center, V1_Periphery
+AnalysisParam.ROI='V1_Posterior' % V1, V1_Posterior (Center), V1_Anterior (Periphery), V1_Dorsal, V1_Ventral
 AnalysisParam.Type='interhemispheric'; % intrahemispheric = within one hemisphere; interhemispheric = between hemispheres
 Sbjs = {'myla'}%'aman', 'ylri', 'auil', 'arak', 'aroo', 'atib', 'imyy', 'chss', 'evad', 'haas', 'rcgr'};
 layers = {'0-2', '4-6', '8-10', '0-10'}; 
@@ -45,17 +48,15 @@ for layer = 1:length(layers)
     for i=1:length(Sbjs)
             
 	    if strcmp(AnalysisParam.Type, 'intrahemispheric')
-		% within V1 or V1 subregions and wthin one hemisphere
-		for s=1
+		    % within V1 or V1 subregions and wthin one hemisphere
+		for s=1 % subsampling iteration
 		    B001a_Selectivity_Proc_Data(Sbjs{i}, Root, AnalysisParam, TrgFile,s)
 		end
 	    
 	    elseif strcmp(AnalysisParam.Type, 'interhemispheric')
-		% within V1 or V1 subregions and between hemispheres
-		B001c_Selectivity_Proc_Data_Interhemi(Sbjs{i}, Root, AnalysisParam, TrgFile)
-	    end
-
-       
+		    % within V1 or V1 subregions and between hemispheres
+		    B001b_Selectivity_Proc_Data_Interhemi(Sbjs{i}, Root, AnalysisParam, TrgFile)
+        end
     
     end
 end

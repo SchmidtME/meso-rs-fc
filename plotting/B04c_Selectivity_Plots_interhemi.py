@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Created on Tue Jan 21 05:28:53 2025
+This script is plotting correlation matrices for rs-FC and selectivity for each
+cortical depth level and the respective V1 subregion between hemispheres. 
+It corresponds to Figure 6 & 7 of the manuscript.
 
-@author: ms1454
+@author: Marianna Elisa Schmidt (marianna.schmidt@maxplanckschools.de)
 """
 
 import os

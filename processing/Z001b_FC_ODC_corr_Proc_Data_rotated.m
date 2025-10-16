@@ -8,6 +8,7 @@ function meanAbsR = Z001b_FC_ODC_corr_Proc_Data_rotated(subName, Root, AnalysisP
 % of < 3mm to the seed vertex. The 1000 2D rs-FC maps are individually correlated with 
 % a 180 deg rotated version of the differential ODC map. The 1000 correlation
 % coefficients are averaged and saved.
+% Authors: Marianna E. Schmidt (marianna.schmidt@maxplanckschools.de), Iman Aganj, Shahin Nasr
 
 tic
 subName

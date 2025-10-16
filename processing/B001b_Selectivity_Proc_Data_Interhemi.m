@@ -1,5 +1,15 @@
 function Data_Combined = B001c_Selectivity_Proc_Data_Interhemi(subName, Root, AnalysisParam, TrgFile)
 
+% This script corresponds to Analysis B - The effect of ocular preference strength (beta),
+% cortical depth, ROI (V1 subregions) (and type) on interhemispheric rs-FC (and selectivity).
+% This function loads anatomical data, ODC (ocular dominance column) maps, 
+% and resting-state fMRI data for a given subject. It then processes this data 
+% by applying detrending and high-pass filtering (if specified), and computes 
+% partial correlations between the specified regions of interest (ROI) of each hemisphere. 
+% The function groups beta values into quantiles and computes the mean of 
+% each beta quantle combinations. 
+% Authors: Marianna Elisa Schmidt (marianna.schmidt@maxplanckschools.de), Iman Aganj, Shahin Nasr
+
 tic
 subName
 

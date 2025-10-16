@@ -1,13 +1,11 @@
-%% Comparison between 10 iterations of subsampling
-
 close all
 clear all
 clc
 
-% This script corresponds to Analysis B - The effect of beta, type, and layer 
-% on rs-FC - and to Figure 3 of the manuscript. The data is averaged over 
-% hemispheres and distances. An rm ANOVA is computed to assess the effects of beta, 
-% layer, and type on rs-FC.
+% Description:
+% This script evaluates the effects of random subsampling of vertex pairs
+% to match the distance distributions of pairs with alike and unalike ocular polarity.
+% Authors: Marianna Elisa Schmidt (marianna.schmidt@maxplanckschools.de)
 
 %% Load the data
 

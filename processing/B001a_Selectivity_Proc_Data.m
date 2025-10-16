@@ -2,16 +2,18 @@ function Data_Combined = B001a_Selectivity_Proc_Data(subName, Root, AnalysisPara
 
 warning('off', 'all');
 
-% This script corresponds to Analysis B - The effect of ocular preference strength (beta),
-% cortical depth, ROI (V1 subregions) (and type) on rs-FC (and selectivity).
+% This script corresponds to Analysis A & B - The effect of distance,
+% ocular preference strength (beta), ortical depth, ROI (V1 subregions) (and type)
+% on rs-FC (and selectivity).
 % This function loads anatomical data, ODC (ocular dominance column) maps, 
 % and resting-state fMRI data for a given subject. It then processes this data 
 % by applying detrending and high-pass filtering (if specified), computes 
 % partial correlations within the specified regions of interest (ROI), and 
 % calculates the distance matrix between vertices in V1. The function groups 
-% distances and beta values into quantiles and computes the correlation between resting-state 
-% time series for different quantiles of vertex  and beta. The results are saved 
-% for further analysis.
+% distances and beta values into quantiles and computes the mean of each distance
+% quantile, beta quantle combinations. 
+% It uses only vertex pairs that were included after subsampling in A001a.
+% Authors: Marianna Elisa Schmidt (marianna.schmidt@maxplanckschools.de), Iman Aganj, Shahin Nasr
 
 tic
 subName

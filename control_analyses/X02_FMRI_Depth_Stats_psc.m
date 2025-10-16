@@ -7,6 +7,7 @@ clc
 % cortical layers, runs, and hemispheres. It averages the mean fMRI signal across runs and
 % hemispheres and performs a repeated-measures ANOVA to assess the effect of 
 % cortical depth on the fMRI signal.
+% Authors: Marianna Elisa Schmidt (marianna.schmidt@maxplanckschools.de)
 
 %% load fmcpr data
 

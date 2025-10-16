@@ -2,12 +2,13 @@ function meanAbsR = Z001a_FC_ODC_corr_Proc_Data(subName, Root, AnalysisParam, Tr
 
 % Description:
 % This script corresponds to Analysis Z - the correlation of rs-FC with the
-% ODC differential map to Figure 6 of the manuscript.
+% ODC differential map to Figure 8 of the manuscript.
 % This script calculate the rs-FC for 1000 randomly selected vertices with vertices 
 % within a ring/donut of variable radii (and excluding the inner vertices with a distance 
 % of < 3mm to the seed vertex. The 1000 2D rs-FC maps are individually correlated with 
 % a spatially shifted version of the differential ODC map. The 1000 correlation
 % coefficients are averaged and saved.
+% Authors: Marianna E. Schmidt (marianna.schmidt@maxplanckschools.de), Iman Aganj, Shahin Nasr
 
 tic
 subName

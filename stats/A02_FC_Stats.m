@@ -3,13 +3,14 @@ clear all
 clc
 
 % Description:
-% This script corresponds to Analysis A - The effect of distance (& type) on 
-% rs-FC and selectivity and to Figure 2 of the manuscript.
+% This script corresponds to Analysis A - The effect of distance (& ocular polarity) 
+% on rs-FC and selectivity and to Figure 2 of the manuscript.
 % For this version, I used data that was radially smoothed over layers 0-10, 
 % with a data matrix that was subsampled to match distance distributions of
 % vertex pairs with alike and unalike relative ocular polairty.
-% The dataa is averaged over hemispheres and betas.
+% The data is averaged over hemispheres and betas.
 % An rm ANOVA is computed to assess the effects of distance and type on rs-FC.
+% Authors: Marianna E. Schmidt (marianna.schmidt@maxplanckschools.de), Iman Aganj, Shahin Nasr
 
 %% Load the data
 
@@ -89,19 +90,3 @@ rm = fitrm(t, 't1-t20~1', 'WithinDesign', within);
 % Display the effects of distance and type on rs-FC
 disp('Effects of distance and type on rs-FC - averaged over betas and hemispheres');
 ranovatbl = ranova(rm, 'WithinModel', 'Distance+Type+Distance*Type')
-
-%% LME
-
-% Calculate the mean over hemispheres and betas for 'Alike' and 'Unalike' conditions
-DATA_ALIKE_mean = squeeze(mean(mean(mean(DATA_ALIKE, 7), 6), 5));
-DATA_UNALIKE_mean = squeeze(mean(mean(mean(DATA_UNALIKE, 7), 6), 5));
-
-DATA(:,:,1) = DATA_ALIKE_mean;
-DATA(:,:,2) = DATA_UNALIKE_mean;
-
-sizeInd = arrayfun(@(s) 1:s, size(DATA), 'UniformOutput', false);
-[Subject, Dist, TypeODC] = ndgrid(sizeInd{:});
-[Subject, Dist, TypeODC] = deal(categorical(Subject), categorical(Dist), categorical(TypeODC));
-T = table(DATA(:), Subject(:), Dist(:), TypeODC(:), 'VariableNames', {'rsFC', 'Subject', 'Dist', 'TypeODC'});
-lme = fitlme(T, 'rsFC ~ Dist*TypeODC + (1|Subject)');
-lme

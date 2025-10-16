@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Created on Sat Jan 18 10:50:46 2025
+This script is plotting violin plots to illustrate rs-FC as a function of
+distance and ocular polarity and corresponds to Figure 2 of the manuscript.
 
-@author: ms1454
+@author: Marianna Elisa Schmidt (marianna.schmidt@maxplanckschools.de)
 """
 
 import os

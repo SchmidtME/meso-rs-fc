@@ -9,6 +9,7 @@ clc
 % subject-specific directory structures and performs the denoising with pre-defined 
 % parameters in ARG (coded like this to avoid interference with parallel processing
 % if enabled. The NORDIC algorithm is used to reduce noise and improve data quality.
+% Authors: Marianna E. Schmidt, marianna.schmidt@maxplanckschools.de
 
 % Add NORDIC software path
 addpath("/autofs/space/ardebil_001/users/Others/Marianna/Software/NORDIC_Raw")

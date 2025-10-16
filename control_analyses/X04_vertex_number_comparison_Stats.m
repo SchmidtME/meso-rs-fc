@@ -2,6 +2,11 @@ clc
 close all
 clear all
 
+% Description:
+% This script evaluates the difference in vertex numbers
+% corresponding to dominant eye or non-dominant eye preference.
+% Authors: Marianna Elisa Schmidt (marianna.schmidt@maxplanckschools.de)
+
 %% Specifications
 
 % Define the base directory where the subject folders are stored

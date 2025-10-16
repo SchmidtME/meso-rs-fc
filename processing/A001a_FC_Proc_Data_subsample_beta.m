@@ -1,17 +1,24 @@
-function Data_Combined = A001b_FC_Proc_Data_subsample_beta(subName, Root, AnalysisParam, TrgFile, s)
+function Data_Combined = A001a_FC_Proc_Data_subsample_beta(subName, Root, AnalysisParam, TrgFile,s)
 
-warning('off', 'all');
 
-% This script corresponds to Analysis B - The effect of ocular preference strength (beta),
-% cortical depth, ROI (V1 subregions) (and type) on rs-FC (and selectivity).
+% This script corresponds to Analysis A - The effect of distance on rs-FC.
 % This function loads anatomical data, ODC (ocular dominance column) maps, 
 % and resting-state fMRI data for a given subject. It then processes this data 
 % by applying detrending and high-pass filtering (if specified), computes 
 % partial correlations within the specified regions of interest (ROI), and 
 % calculates the distance matrix between vertices in V1. The function groups 
-% distances and beta values into quantiles and computes the correlation between resting-state 
-% time series for different quantiles of vertex  and beta. The results are saved 
-% for further analysis.
+% distances and beta values into quantiles.
+% It subsamples vertex pairs so that alike and unalike vertex pairs match
+% distance distributions for each beta quantile. The resulting indices of included
+% vertex pairs are then saved for further analyses.
+% Lastly, it computes the mean for each distance quantiles. 
+% Authors: Marianna Elisa Schmidt (marianna.schmidt@maxplanckschools.de), Iman Aganj, Shahin Nasr
+
+warning('off', 'all');
+saveFigures = 1;
+cnt = 1;
+saveFolder = fullfile('/space/ardebil/1/users/Others/Marianna/FC_7T_Coronal/Controls/Figures/Control_Analyses/Distances_ocular_polarity', datestr(now, 'yyyy-mm-dd'));
+mkdir(saveFolder);
 
 tic
 subName
@@ -20,9 +27,6 @@ Root = fullfile(Root, subName);
 mkdir(Root)
 hemis = {'lh', 'rh'};
 
-% indices for subsampling
-selected_indices_eye1eye2 = load(fullfile('/space/ardebil/1/users/Others/Marianna/FC_7T_Coronal/Controls/Results', [AnalysisParam.ROI '_layers_0-10_intrahemispheric'], subName, sprintf('CorrelationMtx_FC_Params_subsampled_%d.mat',s))).AnalysisParam.selected_indices_eye1eye2;
-selected_indices_same_eye = load(fullfile('/space/ardebil/1/users/Others/Marianna/FC_7T_Coronal/Controls/Results', [AnalysisParam.ROI '_layers_0-10_intrahemispheric'], subName, sprintf('CorrelationMtx_FC_Params_subsampled_%d.mat',s))).AnalysisParam.selected_indices_same_eye;
 % TimeSeries Params
 StrtPnt = AnalysisParam.StrtPnt;
 TmSeries_Length = AnalysisParam.TmSeries_Length;
@@ -82,6 +86,10 @@ for h = 1:numel(hemis)
        % load labels defined on upsampled retinotopy
     if strcmp(AnalysisParam.ROI, 'V1')
         roi_label = read_ROIlabel(fullfile(labelFolder, [hemi '.V1_Upsampled_Rtopy.label']));
+    elseif strcmp(AnalysisParam.ROI, 'V2')
+        roi_label = read_ROIlabel(fullfile(labelFolder, [hemi '.V2_Upsampled_Rtopy.label']));
+    elseif strcmp(AnalysisParam.ROI, 'V3')
+        roi_label = read_ROIlabel(fullfile(labelFolder, [hemi '.V3_Upsampled_Rtopy.label']));
     elseif strcmp(AnalysisParam.ROI, 'V1_Posterior')
         V1_label = read_ROIlabel(fullfile(labelFolder, [hemi '.V1_Upsampled_Rtopy.label']));
         V1_Posterior_label = read_ROIlabel(fullfile(labelFolder, [hemi '.Posterior_Upsampled_Rtopy.label']));
@@ -197,18 +205,6 @@ for h = 1:numel(hemis)
             end 
         end
     end
-
-    sig_odc_v1{h} = sig_odc{h}(bin_mask_vtx_v1_patch{h});
-
-    for q = 1:10
-
-        betas_eye1{h}(q) = median(sig_odc_v1{h}(bin_mask_vtx_eye1{h}(:,q)));
-        betas_eye2{h}(q) = median(sig_odc_v1{h}(bin_mask_vtx_eye2{h}(:,q)));
- 
-    end
-
-    AnalysisParam.betas_eye1_medians{h} = betas_eye1{h};
-    AnalysisParam.betas_eye2_medians{h} = betas_eye2{h};
 
     % only include fac and vtx within v1 patch
     nonbin_mask_vtx_v1_patch = double(bin_mask_vtx_v1_patch{h}); 
@@ -402,23 +398,35 @@ for h = 1:numel(hemis)
             dist_v1_patch_same_eye_subsampled = cell(100, 1);
             corr_v1_patch_eye1eye2_subsampled = cell(100, 1);
             corr_v1_patch_same_eye_subsampled = cell(100, 1);
+            selected_indices_eye1eye2 = cell(100, 2, 10, 10, 1);
+            selected_indices_same_eye = cell(100, 2, 10, 10, 1);
             
             for i = 1:100
-
                 if quants_number_eye1eye2(i) > quants_number_same_eye(i)
-                    dist_v1_patch_eye1eye2_subsampled{i} = dist_v1_patch_eye1eye2_quants{i}(selected_indices_eye1eye2{i,h,q1,q2});
-                    corr_v1_patch_eye1eye2_subsampled{i} = corr_v1_patch_eye1eye2_quants{i}(selected_indices_eye1eye2{i,h,q1,q2});
+                    all_indices_eye1eye2 = 1:numel(dist_v1_patch_eye1eye2_quants{i});
+                    all_indices_same_eye = 1:numel(dist_v1_patch_same_eye_quants{i});
+                    selected_indices_eye1eye2{i,h,q1,q2,:} = randsample(all_indices_eye1eye2, quants_number_same_eye(i));
+                    selected_indices_same_eye{i,h,q1,q2,:} = all_indices_same_eye;
+                    dist_v1_patch_eye1eye2_subsampled{i} = dist_v1_patch_eye1eye2_quants{i}(selected_indices_eye1eye2{i,h,q1,q2,:});
+                    corr_v1_patch_eye1eye2_subsampled{i} = corr_v1_patch_eye1eye2_quants{i}(selected_indices_eye1eye2{i,h,q1,q2,:});
                     
                     dist_v1_patch_same_eye_subsampled{i} = dist_v1_patch_same_eye_quants{i};
                     corr_v1_patch_same_eye_subsampled{i} = corr_v1_patch_same_eye_quants{i};
+                    AnalysisParam.selected_indices_eye1eye2{i,h,q1,q2} = selected_indices_eye1eye2{i,h,q1,q2};
+                    AnalysisParam.selected_indices_same_eye{i,h,q1,q2} = selected_indices_same_eye{i,h,q1,q2};
                 else
                     dist_v1_patch_eye1eye2_subsampled{i} = dist_v1_patch_eye1eye2_quants{i};
                     corr_v1_patch_eye1eye2_subsampled{i} = corr_v1_patch_eye1eye2_quants{i};
         
-                    dist_v1_patch_same_eye_subsampled{i} = dist_v1_patch_same_eye_quants{i}(selected_indices_same_eye{i,h,q1,q2});
-                    corr_v1_patch_same_eye_subsampled{i} = corr_v1_patch_same_eye_quants{i}(selected_indices_same_eye{i,h,q1,q2});
-                    
-                end
+                    all_indices_same_eye = 1:numel(dist_v1_patch_same_eye_quants{i});
+                    all_indices_eye1eye2 = 1:numel(dist_v1_patch_eye1eye2_quants{i});
+                    selected_indices_same_eye{i,h,q1,q2,:} = randsample(all_indices_same_eye, quants_number_eye1eye2(i));
+                    selected_indices_eye1eye2{i,h,q1,q2,:} = all_indices_eye1eye2;
+                    dist_v1_patch_same_eye_subsampled{i} = dist_v1_patch_same_eye_quants{i}(selected_indices_same_eye{i,h,q1,q2,:});
+                    corr_v1_patch_same_eye_subsampled{i} = corr_v1_patch_same_eye_quants{i}(selected_indices_same_eye{i,h,q1,q2,:});
+                    AnalysisParam.selected_indices_same_eye{i,h,q1,q2,:} = selected_indices_same_eye{i,h,q1,q2,:};
+                    AnalysisParam.selected_indices_eye1eye2{i,h,q1,q2,:} = selected_indices_eye1eye2{i,h,q1,q2,:};
+                end            
         
             end
 
@@ -430,45 +438,79 @@ for h = 1:numel(hemis)
 
             % 10 distance quantiles
             
-            dist_concat = vertcat(dist_v1_patch_eye1eye2_subsampled_concat, dist_v1_patch_same_eye_subsampled_concat);
-            corr_concat = vertcat(corr_v1_patch_eye1eye2_subsampled_concat, corr_v1_patch_same_eye_subsampled_concat);
+            data_concat = vertcat(dist_v1_patch_eye1eye2_subsampled_concat, dist_v1_patch_same_eye_subsampled_concat);
             
-            dist_quantiles_10_fin = [3 quantile(dist_concat(dist_concat>3), 10-1) inf];
+            dist_quantiles_10_fin = [3 quantile(data_concat(data_concat>3), 10-1) inf];
+            
+            corr_v1_patch_subsampled_concat = vertcat(corr_v1_patch_eye1eye2_subsampled_concat, corr_v1_patch_same_eye_subsampled_concat);
+            dist_v1_patch_subsampled_concat = vertcat(dist_v1_patch_eye1eye2_subsampled_concat, dist_v1_patch_same_eye_subsampled_concat);
+            
+            % mean for distance quantiles
+            quants_corr_v1_patch{h} = dist_quantiles_10_fin;
+            mean_quants_corr_v1_patch = arrayfun(@(i) mean(corr_v1_patch_subsampled_concat(dist_v1_patch_subsampled_concat>quants_corr_v1_patch{h}(i) & dist_v1_patch_subsampled_concat<=quants_corr_v1_patch{h}(i+1)), "omitnan"), 1:nQuant);
 
-            quants_corr_v1_patch_both{h} = dist_quantiles_10_fin;
-            mean_quants_corr_v1_patch_both = arrayfun(@(i) mean(corr_concat(dist_concat>quants_corr_v1_patch_both{h}(i) & dist_concat<=quants_corr_v1_patch_both{h}(i+1)), "omitnan"), 1:nQuant);
             
-            % saving distances for distance and beta quantile
-            mean_quants_dist_v1_patch_both = arrayfun(@(i) mean(dist_concat(dist_concat>quants_corr_v1_patch_both{h}(i) & dist_concat<=quants_corr_v1_patch_both{h}(i+1)), "omitnan"), 1:nQuant);
-            median_quants_dist_v1_patch_both = arrayfun(@(i) median(dist_concat(dist_concat>quants_corr_v1_patch_both{h}(i) & dist_concat<=quants_corr_v1_patch_both{h}(i+1)), "omitnan"), 1:nQuant);
-            
-            AnalysisParam.mean_quants_dist{h}(q1,q2,:) = mean_quants_dist_v1_patch_both;
-            AnalysisParam.median_quants_dist{h}(q1,q2,:) = median_quants_dist_v1_patch_both;
-            
-            Data_Combined(1:nQuant, 1, h, q1, q2, 1) = mean_quants_corr_v1_patch_both';
-            
+            Data_Combined(1:nQuant, 1, h, q1, q2, 1) = [mean_quants_corr_v1_patch'];
             % z-transformation
-            mean_quants_corr_v1_patch_both_z = 0.5 * log((1 + mean_quants_corr_v1_patch_both) ./ (1 - mean_quants_corr_v1_patch_both));
-            Data_Combined(1:nQuant, 1, h, q1, q2, 2) = mean_quants_corr_v1_patch_both_z';
+            mean_quants_corr_v1_patch_z = 0.5 * log((1 + mean_quants_corr_v1_patch) ./ (1 - mean_quants_corr_v1_patch));
+            Data_Combined(1:nQuant, 1, h, q1, q2, 2) = [mean_quants_corr_v1_patch_z'];
+            
+            if saveFigures && (q1 == 5) && (q2 == 5)
+                % figure of distance distribution
+                cnt = cnt + 1;
+                figure(cnt)
+    
+                % Plot the first histogram
+                h1 = histogram(dist_v1_patch_same_eye_subsampled_concat, 50, 'FaceColor', 'blue', 'EdgeColor', 'blue', 'FaceAlpha', 0.5, 'EdgeAlpha', 0.5);
+                hold on;
+                
+                % Plot the second histogram
+                h2 = histogram(dist_v1_patch_eye1eye2_subsampled_concat, 50, 'FaceColor', 'red', 'EdgeColor', 'red', 'FaceAlpha', 0.5, 'EdgeAlpha', 0.5);
+                
+                % Calculate the medians
+                median_same_eye = median(dist_v1_patch_same_eye_subsampled_concat, 'all', 'omitnan');
+                median_eye1eye2 = median(dist_v1_patch_eye1eye2_subsampled_concat, 'all', 'omitnan');
+                
+                % Get the current y-axis limits
+                yLimits = ylim;
+                
+                % Plot vertical lines at the medians
+                line([median_same_eye median_same_eye], yLimits, 'Color', 'blue', 'LineWidth', 2, 'LineStyle', '--');
+                line([median_eye1eye2 median_eye1eye2], yLimits, 'Color', 'red', 'LineWidth', 2, 'LineStyle', '--');
+                
+                % Add labels and title
+                title(['Comparison of distance distributions for ', subName]);
+                xlabel('Euclidean distance (mm)');
+                ylabel('Frequency');
+                legend('Alike', 'Unalike', 'Location', 'best');
+                grid on;
+
+                savePath = fullfile(saveFolder, sprintf('distances_histogram_subsampled_%s_%s_q%d_q%d_%d.tiff', subName, hemi, q1, q2, s));
+                saveas(gcf, savePath);
+                close all
+            end
 
             %clear corr_v1_patch_mean idx_eye1_q1 idx_eye1_q2 idx_eye2_q1 idx_eye2_q2 corr_v1_patch_eye1eye1 corr_v1_patch_eye2eye2 corr_v1_patch_eye1eye2 dist_v1_patch_eye1eye1 dist_v1_patch_eye2eye2 dist_v1_patch_eye1eye2 corr_v1_patch_eye1eye1 corr_v1_patch_eye2eye2 corr_v1_patch_eye1eye2 corr_v1_patch_same_eye corr_v1_patch_same_eye dist_v1_patch_same_eye mean_quants_corr_v1_patch_eye1eye1 mean_quants_corr_v1_patch_eye2eye2 mean_quants_corr_v1_patch_eye1eye2 mean_quants_corr_v1_patch_same_eye mean_quants_corr_v1_patch_eye1eye1_z mean_quants_corr_v1_patch_eye2eye2_z mean_quants_corr_v1_patch_eye1eye2_z mean_quants_corr_v1_patch_same_eye_z
         end
      end
 end
 
-if ~exist(sprintf('%s/CorrelationMtx_FC_beta_subsampled.mat', Root))
-    save(sprintf('%s/CorrelationMtx_FC_beta_subsampled.mat', Root), 'Data_Combined');
-    disp('Correlation matrices saved successfully.');
-else
-    disp('Correlation matrix file already exists. Skipping save.');
-end
 
-if ~exist(sprintf('%s/CorrelationMtx_FC_beta_Params_subsampled.mat', Root))
-    save(sprintf('%s/CorrelationMtx_FC_beta_Params_subsampled.mat', Root), 'AnalysisParam', '-v7.3');
+% if ~exist(sprintf('%s/CorrelationMtx_FC_subsampled_%d.mat', Root, s))
+    save(sprintf('%s/CorrelationMtx_FC_subsampled.mat', Root), 'Data_Combined');
+    disp('Correlation matrices saved successfully.');
+% else
+%     %save([Root, '/CorrelationMtx_FC_subsampled.mat'], 'Data_Combined');
+%     disp('Correlation matrix file already exists. Skipping save.');
+% end
+
+% if ~exist(sprintf('%s/CorrelationMtx_FC_Params_subsampled_%d.mat', Root, s))
+    save(sprintf('%s/CorrelationMtx_FC_Params_subsampled.mat', Root), 'AnalysisParam', '-v7.3');
     disp('Correlation analysis parameters saved successfully.');
-else
-    disp('Correlation analysis parameters file already exists. Skipping save.');
-end
+% else
+%     %save([Root, '/CorrelationMtx_FC_Params_subsampled.mat'], 'AnalysisParam', '-v7.3');
+%     disp('Correlation analysis parameters file already exists. Skipping save.');
+% end
 
 fprintf('Done in %s s!\n\n', num2str(toc- StrtTime))
 

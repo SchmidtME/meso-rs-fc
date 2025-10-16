@@ -2,6 +2,10 @@ clear all
 close all
 clc
 
+% Description:
+% This script visualizes one example 2D rs-FC map.
+% Authors: Marianna Elisa Schmidt (marianna.schmidt@maxplanckschools.de)
+
 %% specifications
 
 addpath(genpath('/space/ardebil/1/users/Others/Marianna/Code/MesoVision/MESO-FC-Controls'))

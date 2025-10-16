@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Created on Sat Jan 18 10:50:46 2025
+This script is plotting violin plots to illustrate rs-FC as a function of
+distance and ocular polarity and corresponds to right Figure S3 of the manuscript.
 
-@author: ms1454
+@author: Marianna Elisa Schmidt (marianna.schmidt@maxplanckschools.de)
 """
 
 import os
@@ -28,7 +29,7 @@ if save_figures:
 
 subjectFolders = ['aman', 'aroo', 'auil', 'chss']
 ROI = 'V1'
-baseDir = '/space/ardebil/1/users/Others/Marianna/FC_7T_Coronal/Amblyopia/Results'
+baseDir = '/space/ardebil/1/users/Others/Marianna/FC_7T_Coronal/Controls_2/Results'
 
 layers = [f'{ROI}_layers_0-10_intrahemispheric']
 

@@ -4,15 +4,16 @@ clear all
 
 % Description:
 % This script corresponds to Analysis C - the robustness/replicability of rs-FC
-% and selectivity and to Figures suppl xxx of the manuscript.
+% and selectivity and to Figures S3 of the manuscript.
 % This script assesses the main effects of session, type and distance as well
 % as respective interaction effects on rs-FC and therefore is a test for the 
 % robustness or replicability of the rs-FC measure and analysis.
+% Authors: Marianna E. Schmidt (marianna.schmidt@maxplanckschools.de), Iman Aganj, Shahin Nasr
 
 %% Load data
 % Define root directories for the new and old control groups
-Root_Control_new = '/space/ardebil/1/users/Others/Marianna/FC_7T_Coronal/Controls_new/Results';
-Root_Control_old = '/space/ardebil/1/users/Others/Marianna/FC_7T_Coronal/Controls_old/Results';
+Root_Control_new = '/space/ardebil/1/users/Others/Marianna/FC_7T_Coronal/Controls_2/Results';
+Root_Control_old = '/space/ardebil/1/users/Others/Marianna/FC_7T_Coronal/Controls/Results';
 
 % Specify group labels and subject names for each group
 GroupLabels = {'Control_old', 'Control_new'};
@@ -27,7 +28,7 @@ Layers = {'0-10'};
 Groups = {Sbjs_Control_old, Sbjs_Control_new};
 Roots = {Root_Control_old, Root_Control_new};
 
-subsample_iter = {'_2', '_3', '_4', '_5', '_6', '_7', '_8', '_9'};
+subsample_iter = {'_1'};
 
 %%
 for s=1:length(subsample_iter)
@@ -108,36 +109,3 @@ for s=1:length(subsample_iter)
         pause;
     end
 end
-
-%% Archive
-
-% %% effect of layer and distance
-% 
-% %Sbj, Dist, Label, LayerCnt, hemi
-% 
-% GroupVar = [repmat({'Control_new'}, 5, 1); ...
-%             repmat({'Control_old'}, 5, 1); ...
-%             ];
-% 
-% STATS =[];
-% 
-% STATS = [cat(1, ...
-%     [DATA_FC{1}(:,:,1,1,1) DATA_FC{1}(:,:,1,2,1) DATA_FC{1}(:,:,1,3,1)...
-%     DATA_FC{1}(:,:,1,1,2) DATA_FC{1}(:,:,1,2,2) DATA_FC{1}(:,:,1,3,2)],...
-%     [DATA_FC{2}(:,:,1,1,1) DATA_FC{2}(:,:,1,2,1) DATA_FC{2}(:,:,1,3,1)...
-%     DATA_FC{2}(:,:,1,1,2) DATA_FC{2}(:,:,1,2,2) DATA_FC{2}(:,:,1,3,2)]),...
-% ];
-% 
-% ts = arrayfun(@(x) sprintf('t%d', x), 1:60, 'UniformOutput', false);
-% 
-% t =array2table(STATS(:, :),'VariableNames', ts');
-% 
-% t.Group = categorical(GroupVar);
-% 
-% within = table(...
-%     [repmat({'A'}, 10, 1); repmat({'B'}, 10, 1) ; repmat({'C'}, 10, 1); repmat({'A'}, 10, 1); repmat({'B'}, 10, 1) ; repmat({'C'}, 10, 1)], ... % layers
-%     repmat({'AAAA'; 'BBBB'; 'CCCC'; 'DDDD'; 'EEEE'; 'FFFF'; 'GGGG'; 'HHHH'; 'IIII'; 'JJJJ'}, 6, 1), ... % distances
-%     'VariableNames', {'Layer', 'Distance'});
-% 
-% rm = fitrm(t,'t1-t60~Group','WithinDesign',within)
-% ranovatbl = ranova(rm,'WithinModel','Layer+Distance+Layer*Distance')

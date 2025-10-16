@@ -4,10 +4,11 @@ clc
 
 % Description:
 % This script corresponds to Analysis Z - the correlation of rs-FC with the
-% ODC differential map to Figure 6 of the manuscript.
+% ODC differential map and to Figure 8 of the manuscript.
 % This script calls subfunctions that calculate the correlation of rs-FC 
 % with either a spatially shifted or rotated version of the differential ODC map
 % and saves the resulting correlation coefficients for each subject.
+% Authors: Marianna E. Schmidt (marianna.schmidt@maxplanckschools.de), Iman Aganj, Shahin Nasr
 
 %% specifications
 

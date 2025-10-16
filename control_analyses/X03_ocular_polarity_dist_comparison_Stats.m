@@ -2,6 +2,11 @@ clc
 close all
 clear all
 
+% Description:
+% This script evaluates the difference in distance distributions between
+% vertex pairs with alike or unalike ocular polarity before or after subsampling.
+% Authors: Marianna Elisa Schmidt (marianna.schmidt@maxplanckschools.de)
+
 %% Specifications
 
 % Define the base directory where the subject folders are stored

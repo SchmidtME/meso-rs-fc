@@ -1,16 +1,11 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Created on Fri Dec 13 13:16:51 2024
+This script is plotting correlation correlation coefficient between 
+rs-FC rings of varying outer radii and either the corresponding,spatially
+shifted or rotated ODC map. It corresponds to Figure 8 of the manuscript.
 
-@author: ms1454
-
-This script analyzes the correlation between rs-FC and the differential
-ODC maps that was previously computed for each subject in matlab.
-It compares the mean absolute Pearson correlation values (R) for  of the
-rs-FC map with different radii, with shifted or rotated donuts of the ODC
-differential map. Statistical tests are performed to assess significance, 
-and results are plotted and optionally saved as figures.
+@author: Marianna Elisa Schmidt (marianna.schmidt@maxplanckschools.de)
 """
 
 import os

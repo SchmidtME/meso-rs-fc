@@ -2,6 +2,11 @@ clc
 close all
 clear all
 
+% Description:
+% This script corresponds to Analysis Z - The correlation between rs-Fc patterns and ODC maps (Figure 8)
+% An rm ANOVA is computed to assess the effects of H1, shifted H0 or rotated H0.
+% Authors: Marianna E. Schmidt (marianna.schmidt@maxplanckschools.de), Iman Aganj, Shahin Nasr
+
 %% Specifications
 
 % donut radii

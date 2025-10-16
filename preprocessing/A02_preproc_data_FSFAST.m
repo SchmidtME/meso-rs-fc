@@ -7,6 +7,7 @@ clc
 % including NORDIC denoising, slice-timing correction, upsampling, 
 % FSFAST preprocessing, and layer-specific analysis. It generates intermediate and final outputs
 % required for analyzing the data in the context of intracortical layers.
+% Authors: Marianna E. Schmidt, marianna.schmidt@maxplanckschools.de; Shahin Nasr
 
 % add paths to necessary software
 addpath("/autofs/space/ardebil_001/users/Others/Marianna/Software/NORDIC_Raw")

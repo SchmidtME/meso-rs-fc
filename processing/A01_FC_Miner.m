@@ -3,19 +3,23 @@ clear all
 clc
 
 % Description:
-% This script corresponds to Analysis A - The effect of distance (& type) on rs-FC and selectivity and to Figure 2 of the manuscript.
+% This script corresponds to Analysis A - The effect of distance on rs-FC 
+% and selectivity and to Figure 2 of the manuscript.
 % This script runs subfunctions to calculate the rs-FC for each subject and at
-% different cortical depth in V1 and subregions of V1. 
+% different cortical depth in V1 and subregions of V1. It subsamples the vertex
+% pairs to match distance distribution of alike and unalike ocular polarity
+% vertex pairs for every beta quantile combination.
 % It specifies the input parameters to the subfunctions to run additional 
 % preprocessing (such as detrending and high-pass filtering), and to save the 
 % mean correlation for a number of distances.
+% Authors: Marianna E. Schmidt (marianna.schmidt@maxplanckschools.de), Iman Aganj, Shahin Nasr
 
 %% Specifications
 
 % Define the region of interest (ROI) patch and specific area of interest (e.g., V1, V2, etc.)
 AnalysisParam.ROIpatch = "V1_patch.flat"; % Patch file for the ROI
 AnalysisParam.ROI = 'V1'; % Choose the ROI: V1, V2, V3, V4, V1_Center, V1_Periphery
-AnalysisParam.Type='intrahemispheric'; % Define type of analysis: intrahemispheric (within one hemisphere) or interhemispheric (between hemispheres)
+AnalysisParam.Type='intrahemispheric'; 
 
 % List of subjects to process
 Sbjs = {'myla'}%aman', 'ylri', 'auil', 'arak', 'aroo', 'atib', 'imyy', 'chss', 'evad', 'haas', 'rcgr', 'atev', 'uces', 'myla', 'main', 'ridg', 'uces', 'oban'};
@@ -49,15 +53,11 @@ for layer = 1:length(layers)
 
     % Parallel processing for each subject
     for i = 1:length(Sbjs)
-        if strcmp(AnalysisParam.Type, 'intrahemispheric')
-            for s = 1
-                % Call the processing function for each subject
-                %A001a_FC_Proc_Data_subsample(Sbjs{i}, Root, AnalysisParam, TrgFile,s)
-                A001b_FC_Proc_Data_subsample_beta(Sbjs{i}, Root, AnalysisParam, TrgFile, s)
-            end
-        elseif strcmp(AnalysisParam.Type, 'interhemispheric')
-            A001c_FC_Proc_Data_Interhemi_beta(Sbjs{i}, Root, AnalysisParam, TrgFile)
 
-        end
+            for s = 1 % subsampling iteration
+                % Call the processing function for each subject
+                A001a_FC_Proc_Data_subsample_beta(Sbjs{i}, Root, AnalysisParam, TrgFile, s) % subsampling
+            end
+        
     end
 end

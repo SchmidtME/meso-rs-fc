@@ -6,10 +6,9 @@ clc
 % This script corresponds to Analysis B - The effect of beta, type, and layer on rs-FC and selectivity.
 % This is the analysis comparing V1 subregions. It corresponds to Figure 4 of the manuscript. 
 % The data is averaged over hemispheres and distances. The first part assesses differences between 
-% V1_Dorsal and V1_Ventral. The second part assesses differences 
-% between V1_Ventral and V1_Dorsal.
-% First, an rm ANOVA is computed to assess the effects of beta, layer, ROI and type on rs-FC.
-% Then, an rm ANOVA is computed to assess the effects of beta, layer, and ROI on selectivity.
+% V1_Dorsal and V1_Ventral.
+% An rm ANOVA is computed to assess the effects of beta, layer, ROI and type on rs-FC.
+% Authors: Marianna E. Schmidt (marianna.schmidt@maxplanckschools.de), Iman Aganj, Shahin Nasr
 
 %% Load the data for V1 Dorsal and Ventral
 
@@ -109,32 +108,3 @@ if saveTables
     writetable(ranovatbl, [savePath 'DorsVSVent_anova_cum.xlsx'], 'WriteRowNames', true);
 end
 
-%% LME - Ventral vs. Dorsal, mean over distances
-
-clear DATA
-% mean over distances
-DATA_ALIKE_mean = squeeze(mean(DATA_ALIKE, 2));
-DATA_UNALIKE_mean = squeeze(mean(DATA_UNALIKE, 2));
-
-DATA(:,:,:,:,:,:,1) = DATA_UNALIKE_mean;
-DATA(:,:,:,:,:,:,2) = DATA_ALIKE_mean;
-
-sz = size(DATA);
-Mask = true(sz) & permute(triu(true(sz(5:6))), [3 4 5 6 1 2 7]);
-
-sizeInd = arrayfun(@(s) 1:s, size(DATA), 'UniformOutput', false);
-[Subject, ROI, Layer, Hemi, BQ1, BQ2, TypeODC] = ndgrid(sizeInd{:});
-[Subject, ROI, Layer, Hemi, TypeODC] = deal(categorical(Subject), categorical(ROI), categorical(Layer), categorical(Hemi), categorical(TypeODC));
-
-prodBQ = BQ1 .* BQ2;
-
-T = table(DATA(Mask), Subject(Mask), ROI(Mask), Layer(Mask), Hemi(Mask), prodBQ(Mask), TypeODC(Mask), 'VariableNames', {'rsFC', 'Subject', 'ROI', 'Layer', 'Hemi', 'prodBQ', 'TypeODC'});
-
-lme = fitlme(T, 'rsFC ~ prodBQ*Layer*TypeODC*ROI + (1|Subject)');
-
-if saveTables
-    [xx, xxx, Coefficients] = fixedEffects(lme, 'Alpha', 0.05);
-    resultsTable = table(lme.CoefficientNames', Coefficients.Estimate, Coefficients.SE, Coefficients.tStat, Coefficients.DF, Coefficients.pValue, Coefficients.Upper, Coefficients.Lower, ...
-                     'VariableNames', {'Name', 'Estimate', 'SE', 'tStat', 'DF', 'pValue', 'Upper', 'Lower'});
-    writetable(resultsTable, [savePath 'V1_DorsVSVent_lme.xlsx']);
-end

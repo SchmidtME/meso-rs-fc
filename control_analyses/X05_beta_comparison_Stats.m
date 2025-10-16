@@ -2,6 +2,11 @@ close all
 clear all
 clc
 
+% Description:
+% This script evaluates the difference in ocular preference strength (beta)
+% between vertices corresponding to dominant eye or non-dominant eye preference.
+% Authors: Marianna Elisa Schmidt (marianna.schmidt@maxplanckschools.de)
+
 %%
 
 saveFigures = 1;
