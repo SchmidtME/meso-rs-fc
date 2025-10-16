@@ -1,10 +1,20 @@
-# meso-rs-fc
+# Code to replicate analysis of Schmidt et al., 2025
 
-Code for the preprocessing and analysis of rs-FC in individuals with intact vision. This folder contains code that was used for the analyses and plotting for the manuscript (link to biorxiv tba).
+This repository contains code to replicate the study presented in Schmidt et al., (2025)
+Unraveling the mesoscale functional connectivity of the human primary visual cortex using high-resolution functional MRI. bioRxiv. DOI: https://doi.org/10.1101/2025.03.27.645795 
 
-The polishing of the code is work in progress.
+Contributers:
 
-For now the plots and stats for Analysis 1: "The effects of distance and ocular polarity on rs-FC and selectivity" and Analysis 2: "The effects of ODI, cortical depth, and ocular polarity on rs-FC and selectivity" corresponding to Figures 2 and 3 of the manuscript can be run with the correlation matrices provided in Dropbox (link tba).
+Marianna Elisa Schmidt, marianna.schmidt@maxplanckschools.de
+Iman Aganj, iaganj@mgh.harvard.edu
+Shahin Nasr, shahin.nasr@mgh.harvard.edu
 
-Scripts in the folders "preprocessing" and "processing" need access to the original data and the code is not fully commented yet.
+Prerequisites:
+
+This code uses multiple different Softwares.
+
+FreeSurfer (version 7.4.0)
+MATLAB (version R2023b)
+Python (version 3.12)
+NORDIC_Raw (Moeller et al., 2021)
 
