@@ -1,9 +1,14 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Created on Tue Feb  4 09:31:52 2025
+This script plots the median cortical distance within each distance quantile,
+averaged across subjects. It loads the per-subject distance quantile medians
+from the subsampled rs-FC parameter files, averages the absolute distances over
+hemispheres and the (beta/distance) quantile dimensions, and plots each
+subject's profile together with the mean across subjects. This corresponds to
+Figure 1 of the supplementary material of the manuscript.
 
-@author: ms1454
+@author: Marianna Elisa Schmidt (marianna.schmidt@maxplanckschools.de)
 """
 
 import os
@@ -12,6 +17,8 @@ import scipy.io as sio
 import h5py
 import numpy as np
 import matplotlib.pyplot as plt
+
+#%% Specification of paths and save directory
 
 save_figures = 1
 if save_figures:
@@ -36,7 +43,9 @@ subjects = ['haas',
    'auil',
    'myla']
 
-# Initialize a list to store averaged results from each subject
+#%% Load distance medians per quantile from all subjects
+
+# Preallocate array for distance medians (subjects x hemispheres x 10 distance x 10 beta quantiles)
 mat_data = np.zeros((len(subjects),2,10,10,10))
 
 # Loop through each folder
@@ -44,18 +53,20 @@ for s, subject in enumerate(subjects):
     folder_path = os.path.join(base_path, subject)
     mat_file_path = os.path.join(folder_path, 'CorrelationMtx_FC_beta_Params_subsampled.mat')
 
-    # Load the .mat file
+    # Load the .mat file (HDF5) and extract the distance median vectors for each hemisphere
     data = h5py.File(mat_file_path, 'r')
     mat_data_dist_lh = data['AnalysisParam']['median_quants_dist'][0,0]
     mat_data[s,0,:,:,:] = np.array(data[mat_data_dist_lh])
     mat_data_dist_rh = data['AnalysisParam']['median_quants_dist'][1,0]
     mat_data[s,1,:,:,:] = np.array(data[mat_data_dist_rh])
-    
+
+#%% Average the absolute distance medians over hemispheres and quantile dimensions, then over subjects
+
 mean_data = np.mean(np.mean(np.mean(np.abs(mat_data), axis=1), axis=2), axis=2)
 
 mean_mean_data = np.mean(mean_data, axis=0)
 
-#%% positive quantiles
+#%% Plot labelled figure: distance medians per quantile
 
 # Create a figure for all subjects
 plt.figure(figsize=(10, 6))
@@ -90,6 +101,7 @@ if save_figures:
 plt.show()
 
 #%%
+#%% Plot clean version (no tick labels) for publication
 
 if save_figures:
     # Create a figure for all subjects

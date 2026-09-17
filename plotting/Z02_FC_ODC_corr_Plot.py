@@ -69,6 +69,7 @@ mean_abs_r_rotated_all = np.stack(mean_abs_r_rotated_all, axis=2)
 #%% Compute mean and standard error across subjects
 
 # Mean and standard error for the standard data
+# mean over hemispheres (axis 3) and subjects (axis 2), SEM across subjects
 mean_abs_r = np.mean(np.mean(mean_abs_r_all, axis=2), axis=2)
 std_abs_r = np.std(np.mean(mean_abs_r_all, axis=3), axis=2) / np.sqrt(mean_abs_r_all.shape[2])
 
@@ -99,7 +100,7 @@ axs[0].set_ylabel('Pearson r')
 axs[0].set_title('Cortical depth 0-10')
 axs[0].legend()
 
-# Compute p-values for paired t-tests
+# Compute p-values for paired t-tests (H1 vs each H0 null)
 p_values = []
 p_values_rot = []
 for i in x:
