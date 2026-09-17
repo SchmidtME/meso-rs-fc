@@ -7,7 +7,7 @@ function meanAbsR = Z001b_FC_ODC_corr_Proc_Data_rotated(subName, Root, AnalysisP
 % within a ring/donut of variable radii (and excluding the inner vertices with a distance 
 % of < 3mm to the seed vertex. The 1000 2D rs-FC maps are individually correlated with 
 % a 180 deg rotated version of the differential ODC map. The 1000 correlation
-% coefficients are averaged and saved.
+% coefficients are averaged and saved as meanAbsR_Denoised_excl_3mm_rotated.mat.
 % Authors: Marianna E. Schmidt (marianna.schmidt@maxplanckschools.de), Iman Aganj, Shahin Nasr
 
 tic
@@ -42,6 +42,7 @@ folder = '/space/ardebil/1/users/Others/Marianna/FC_7T_Coronal/Controls/Data_Den
 rsFolder =  fullfile(folder, [subName], 'bold_Close_Upsampled2');
 
 %% Load and show anatomical data and ODC maps
+% --- For each hemisphere: load the ODC beta map, surfaces/labels, and build the ROI masks ---
 
 % get folder name where ODC data is located
 d = dir(fullfile(odcFolder, '*Smoothing_0-2.lh')).name(1:end-3); %Stereopsis_TR3_Columnar_Smoothing_0-2
@@ -107,6 +108,7 @@ for h = 1:numel(hemis)
 end
 
 %% Create distance map for vertices
+% --- Compute pairwise Euclidean distances between the V1-patch vertices (per hemisphere) ---
 
 fprintf('Creating Distance Matrix! \n')
 StrtTime = toc;
@@ -122,6 +124,7 @@ end
 fprintf('Done in %s s!\n\n', num2str(toc- StrtTime))
     
 %% Load and show resting-state functional data
+% --- For each session: load the layer target, trim/preprocess the time series, and accumulate the ROI data ---
 
 % get rs session names
 d = dir(fullfile(rsFolder, '0*')); 
@@ -132,15 +135,14 @@ end
 
 fprintf('%s Resting-State Runs were found! \n', num2str(length(rsSessions)))
 
-%%
-
 % load data for every session, do detrend & hpf, compute partialcorr, save it to matrix (sessions, partialcorr), then do averaging
+% --- Session loop: load the rs layer target per hemisphere and its covariates ---
 for sessionNum = 1:length(rsSessions)
     fprintf('Loading Restig-Sate Data Run %s! \n', num2str(sessionNum))
     StrtTime = toc;
     clear rs_v1_patch rs_v1_patchBoth
 
-    % initialize wm and mcpr regressors and rs within patch?
+    % initialize wm and mcpr regressors and rs within patch
     wm = []; mcpr = []; rs_v1_patch{h} = [];
 
     for h = 1:numel(hemis)
@@ -152,7 +154,7 @@ for sessionNum = 1:length(rsSessions)
         sessionNumTempAll = sessionNum;
         
         for sessionNumTemp = sessionNumTempAll
-            % load the rs data
+            % load the rs surface overlay (.mgz) for the requested layer target
             fprintf('The target file is : %s \n', [hemi Trg_File])
 
             dataFile_rs = fullfile(rsFolder, rsSessions{sessionNumTemp}, [hemi Trg_File]);
@@ -189,27 +191,30 @@ for sessionNum = 1:length(rsSessions)
 end
 
 %% Correlation
+% --- For each hemisphere, ring radius, hypothesis and random seed: correlate the ring rs-FC map with the (rotated) ODC map ---
 
 visualizeResults = false
-distEdgeRange = 4:0.5:10;
-minDist = 3; % mm
+distEdgeRange = 4:0.5:10; % ring outer radii (mm)
+minDist = 3; % mm -> inner radius excludes the ~3 mm disc around the seed
 numSamplePointsPermm2 = 10; % Number of Halton sample points per mm2.
 
 for h = 1:numel(hemis)
-    maskedSig = sig_odc{h}(bin_mask_vtx_v1_patch{h}); % Significance values inside the patch
+    maskedSig = sig_odc{h}(bin_mask_vtx_v1_patch{h}); % ODC significance values inside the patch
     for iDistFromEdge = 1:length(distEdgeRange) % mm
         distFromEdge = distEdgeRange(iDistFromEdge);
+        % number of Halton sample points needed to fill the ring/donut area
         N = round(numSamplePointsPermm2 * pi*(distFromEdge^2 - minDist^2));
         clear circR
+        % candidate seed vertices with enough vertices within the ring radius
         ind = find(sum(dist_v1_patch{h} < distFromEdge, 2) > 6*(pi*distFromEdge^2));
 
-        for iHypoth = 1:2
+        for iHypoth = 1:2 % 1 = null (180-deg rotated ODC), 2 = H1 (unrotated ODC)
             for k = 1:1000
 
-                randInd(1) = ind(randi(length(ind)));
-                randInd(2) = randInd(1);
+                randInd(1) = ind(randi(length(ind))); % random seed vertex
+                randInd(2) = randInd(1); % both rs-FC and ODC use the same center
                 
-                % Generate Halton points in 2D
+                % Generate Halton (quasi-random) points in 2D inside the ring/donut
                 haltonPoints = (net(haltonset(2), round(8*N*(distFromEdge^2)/(pi*(distFromEdge^2 - minDist^2)))) * 2 - 1) * distFromEdge; %(net(haltonset(2), 3*N) * 2 - 1) * distFromEdge; % Generate 3N 2D Halton sample points in [-1 1].
                 distSqr = sum(haltonPoints.^2,2);
                 haltonPoints = haltonPoints(distSqr <= distFromEdge^2 & distSqr >= minDist^2, :); % Filter Halton points inside the disc.
@@ -218,23 +223,26 @@ for h = 1:numel(hemis)
                 % Project the rs-fMRI data (circNum=1) and ODC significance map (circNum=2) to Halton points
                 for circNum = 1:2
                     discCenter = vtx_v1_patch{h}(randInd(circNum),1:2);
-                    haltonPointsMoved{circNum} = haltonPoints + discCenter; % Adding the disc center.
+                    haltonPointsMoved{circNum} = haltonPoints + discCenter; % translate points to the disc center
                     nearestIdx = knnsearch(vtx_v1_patch{h}(:, 1:2), haltonPointsMoved{circNum}); % Map Halton points to nearest vertices
 
                     if circNum == 1
-                        projectedHalton{circNum} = rs_v1_patch{h}(nearestIdx,:); % Map rs-fMRI values
+                        projectedHalton{circNum} = rs_v1_patch{h}(nearestIdx,:); % map rs-fMRI values onto the ring
                     else
                         if iHypoth == 1 % Null hypothesis, rotation
+                            % rotate the ODC map by 180 degrees about the disc center
                             rotatedPoints = -haltonPoints + discCenter(1:2);
                             nearestIdx = knnsearch(vtx_v1_patch{h}(:, 1:2), rotatedPoints); 
                             projectedHalton{circNum} = maskedSig(nearestIdx); % Map rotated ODC significance values
                         else
-                            projectedHalton{circNum} = maskedSig(nearestIdx); % Map ODC values
+                            projectedHalton{circNum} = maskedSig(nearestIdx); % Map unrotated ODC values (H1)
                         end
                     end
                 end
 
+                % partial-correlate the seed time series with the ring vertices (regressing out covariates) -> ring rs-FC map
                 circCorr = partialcorr(projectedHalton{1}', rs_v1_patch{h}(randInd(1),:)', [mcpr(:,1:3) wm]);
+                % correlate the ring rs-FC map with the (rotated) ODC map for this seed
                 circR(k) = corr(circCorr, projectedHalton{2});
 
                 if visualizeResults
@@ -257,11 +265,13 @@ for h = 1:numel(hemis)
                     set(gcf, "Name", ['r = ' num2str(circR(k))])
                 end
             end
+            % average the absolute correlation over the 1000 seeds for this radius & hypothesis
             meanAbsR(iDistFromEdge, iHypoth, h) = meanabs(circR);
         end
     end
 end
 
+% --- Save the mean-absolute-correlation array plus parameters for this subject ---
 save([Root,'/meanAbsR_Denoised_excl_3mm_rotated.mat'], 'meanAbsR', 'distEdgeRange', 'AnalysisParam')
 
 clear meanAbsR

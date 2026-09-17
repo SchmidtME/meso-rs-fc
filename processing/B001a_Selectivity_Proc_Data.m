@@ -13,6 +13,9 @@ warning('off', 'all');
 % distances and beta values into quantiles and computes the mean of each distance
 % quantile, beta quantle combinations. 
 % It uses only vertex pairs that were included after subsampling in A001a.
+% The per-subject selectivity rs-FC is saved as CorrelationMtx_Selectivity*.mat and
+% the parameters (including beta medians and distance medians per quantile) in the
+% corresponding parameter files.
 % Authors: Marianna Elisa Schmidt (marianna.schmidt@maxplanckschools.de), Iman Aganj, Shahin Nasr
 
 tic
@@ -23,6 +26,7 @@ mkdir(Root)
 hemis = {'lh', 'rh'};
 
 % indices for subsampling
+% --- Load the vertex-pair subsample indices produced by A001a so alike/unalike distance distributions match ---
 % selected_indices_eye1eye2 = load(fullfile('/space/ardebil/1/users/Others/Marianna/FC_7T_Coronal/Controls/Results', [AnalysisParam.ROI '_layers_0-10_intrahemispheric'], subName, sprintf('CorrelationMtx_FC_Params_subsampled_%d.mat', s))).AnalysisParam.selected_indices_eye1eye2;
 % selected_indices_same_eye = load(fullfile('/space/ardebil/1/users/Others/Marianna/FC_7T_Coronal/Controls/Results', [AnalysisParam.ROI '_layers_0-10_intrahemispheric'], subName, sprintf('CorrelationMtx_FC_Params_subsampled_%d.mat', s))).AnalysisParam.selected_indices_same_eye;
 selected_indices_eye1eye2 = load(fullfile('/space/ardebil/1/users/Others/Marianna/FC_7T_Coronal/Controls/Results', [AnalysisParam.ROI '_layers_0-10_intrahemispheric'], subName, sprintf('CorrelationMtx_FC_Params_subsampled.mat'))).AnalysisParam.selected_indices_eye1eye2;
@@ -55,6 +59,7 @@ folder = '/space/ardebil/1/users/Others/Marianna/FC_7T_Coronal/Controls/Data_Den
 rsFolder =  fullfile(folder, [subName], 'bold_Close_Upsampled2');
 
 %% Load and show anatomical data and ODC maps
+% --- For each hemisphere: load the ODC beta map, surfaces/labels, and build the ROI and eye-quantile masks ---
 
 % get folder name where ODC data is located
 d = dir(fullfile(odcFolder, '*Smoothing_0-2.lh')).name(1:end-3); %Stereopsis_TR3_Columnar_Smoothing_0-2
@@ -166,6 +171,7 @@ for h = 1:numel(hemis)
     AnalysisParam.num_included_vertices_eye1{h} = sum(bin_mask_vtx_eye1{h},'all');
     AnalysisParam.num_included_vertices_eye2{h} = sum(bin_mask_vtx_eye2{h},'all');
 
+    % balance vertex counts across beta quantiles (drop one vertex if quantiles differ in size)
     for q1 = 1:numel(quantile_beta_thresholds) 
         for q2 = 1:numel(quantile_beta_thresholds)
             % sometimes quantiles include one vertex more than the other, so one random vertex is excluded
@@ -202,6 +208,7 @@ for h = 1:numel(hemis)
         end
     end
 
+    % compute the median ocular-preference strength (beta) of each eye-1/eye-2 quantile
     sig_odc_v1{h} = sig_odc{h}(bin_mask_vtx_v1_patch{h});
 
     for q = 1:10
@@ -234,6 +241,7 @@ for h = 1:numel(hemis)
 end
 
 %% Create distance map for vertices
+% --- Compute pairwise Euclidean distances between the V1-patch vertices (per hemisphere) ---
 
 fprintf('Creating Distance Matrix! \n')
 StrtTime = toc;
@@ -248,6 +256,7 @@ end
 fprintf('Done in %s s!\n\n', num2str(toc- StrtTime))
 
 %% Load and show resting-state functional data
+% --- For each session: load the layer target, trim/preprocess the time series, and compute partial correlations ---
 
 % get rs session names
 d = dir(fullfile(rsFolder, '0*')); 
@@ -258,9 +267,9 @@ end
 
 fprintf('%s Resting-State Runs were found! \n', num2str(length(rsSessions)))
 
-%%
-
 % load data for every session, do detrend & hpf, compute partialcorr, save it to matrix (sessions, partialcorr), then do averaging
+
+% --- Session loop: load + preprocess rs data for both hemispheres, then compute partial correlations ---
 for sessionNum = 1:length(rsSessions)
     fprintf('Loading Restig-Sate Data Run %s! \n', num2str(sessionNum))
     StrtTime = toc;
@@ -326,6 +335,7 @@ for sessionNum = 1:length(rsSessions)
 end
 
 %% do analysis for mean across sessions
+% --- Average over sessions; loop over beta-quantile pairs and compute the 4 selectivity types per distance quantile ---
 fprintf('Saving the data! \n')
 StrtTime = toc;
 
@@ -344,16 +354,19 @@ for h = 1:numel(hemis)
             idx_eye2_q2 = find(bin_mask_vtx_eye2{h}(:,q2) == 1);
             
             % Filter the correlation matrix based on these rows and columns
+            % (extract submatrices for same-eye, both-eye, and different-eye vertex pairs)
             corr_v1_patch_eye1eye1 = corr_v1_patch_mean(idx_eye1_q1, idx_eye1_q2);
             corr_v1_patch_eye2eye2 = corr_v1_patch_mean(idx_eye2_q1, idx_eye2_q2);
             corr_v1_patch_eye1eye2 = [corr_v1_patch_mean(idx_eye1_q1, idx_eye2_q2); corr_v1_patch_mean(idx_eye1_q2, idx_eye2_q1)];
 
             % filter distance matrix for distances of vertices eye1 with eye1, eye2 with eye2 and eye1 with eye2
+            % (extract the corresponding distance submatrices for the same pair groupings)
             dist_v1_patch_eye1eye1 = dist_v1_patch{h}(idx_eye1_q1, idx_eye1_q2);
             dist_v1_patch_eye2eye2 = dist_v1_patch{h}(idx_eye2_q1, idx_eye2_q2);
             dist_v1_patch_eye1eye2 = [dist_v1_patch{h}(idx_eye1_q1, idx_eye2_q2); dist_v1_patch{h}(idx_eye1_q2, idx_eye2_q1)];
 
             % concatenate eye1eye1 and eye2eye2
+            % (pad to a common size so same-eye pairs (eye1+eye2) can be pooled into one block)
             % pad matrices for concatenation
             max_rows = max(size(corr_v1_patch_eye1eye1), size(corr_v1_patch_eye2eye2));
             max_cols = max(size(corr_v1_patch_eye1eye1), size(corr_v1_patch_eye2eye2));
@@ -402,6 +415,8 @@ for h = 1:numel(hemis)
             end
 
             % subsampling
+            % (apply the precomputed subsample indices from A001a so alike/unalike
+            %  distance distributions match; no new random subsampling is performed here)
             dist_v1_patch_eye1eye2_subsampled = cell(100, 1);
             dist_v1_patch_same_eye_subsampled = cell(100, 1);
             corr_v1_patch_eye1eye2_subsampled = cell(100, 1);
@@ -446,6 +461,7 @@ for h = 1:numel(hemis)
             dist_quantiles_10_fin = [3 quantile(data_concat(data_concat>3), 10-1) inf];
             
             % mean for distance quantiles
+            % (average rs-FC of each of the 4 types -- same-eye, eye1-eye1, eye2-eye2, eye1-eye2 -- per distance quantile)
             quants_corr_v1_patch_eye1eye1{h} = dist_quantiles_10_fin;
             mean_quants_corr_v1_patch_eye1eye1 = arrayfun(@(i) mean(corr_v1_patch_eye1eye1(dist_v1_patch_eye1eye1>quants_corr_v1_patch_eye1eye1{h}(i) & dist_v1_patch_eye1eye1<=quants_corr_v1_patch_eye1eye1{h}(i+1)), "omitnan"), 1:nQuant);
             
@@ -459,6 +475,7 @@ for h = 1:numel(hemis)
             mean_quants_corr_v1_patch_same_eye = arrayfun(@(i) mean(corr_v1_patch_same_eye_subsampled_concat(dist_v1_patch_same_eye_subsampled_concat>quants_corr_v1_patch_same_eye{h}(i) & dist_v1_patch_same_eye_subsampled_concat<=quants_corr_v1_patch_same_eye{h}(i+1)), "omitnan"), 1:nQuant);
 
             % saving distances for distance and beta quantile
+            % (record mean/median distance of alike and unalike pairs per distance quantile for the params file)
             mean_quants_dist_v1_patch_same_eye = arrayfun(@(i) mean(dist_v1_patch_same_eye_subsampled_concat(dist_v1_patch_same_eye_subsampled_concat>quants_corr_v1_patch_same_eye{h}(i) & dist_v1_patch_same_eye_subsampled_concat<=quants_corr_v1_patch_same_eye{h}(i+1)), "omitnan"), 1:nQuant);
             median_quants_dist_v1_patch_same_eye = arrayfun(@(i) median(dist_v1_patch_same_eye_subsampled_concat(dist_v1_patch_same_eye_subsampled_concat>quants_corr_v1_patch_same_eye{h}(i) & dist_v1_patch_same_eye_subsampled_concat<=quants_corr_v1_patch_same_eye{h}(i+1)), "omitnan"), 1:nQuant);
 
@@ -470,8 +487,10 @@ for h = 1:numel(hemis)
             AnalysisParam.eye1eye2_mean_quants_dist{h}(q1,q2,:) = mean_quants_dist_v1_patch_eye1eye2;
             AnalysisParam.eye1eye2_median_quants_dist{h}(q1,q2,:) = median_quants_dist_v1_patch_eye1eye2;
 
+            % store raw correlations of the 4 types into Data_Combined (alike, eye1-eye1, eye2-eye2, unalike)
             Data_Combined(1:nQuant, 1:4, h, q1, q2, 1) = [mean_quants_corr_v1_patch_same_eye' mean_quants_corr_v1_patch_eye1eye1' mean_quants_corr_v1_patch_eye2eye2' mean_quants_corr_v1_patch_eye1eye2'];
             % z-transformation
+            % (Fisher z-transform each of the 4 type-correlation means; stored in z-slot)
             mean_quants_corr_v1_patch_same_eye_z = 0.5 * log((1 + mean_quants_corr_v1_patch_same_eye) ./ (1 - mean_quants_corr_v1_patch_same_eye));
             mean_quants_corr_v1_patch_eye1eye1_z = 0.5 * log((1 + mean_quants_corr_v1_patch_eye1eye1) ./ (1 - mean_quants_corr_v1_patch_eye1eye1));
             mean_quants_corr_v1_patch_eye2eye2_z = 0.5 * log((1 + mean_quants_corr_v1_patch_eye2eye2) ./ (1 - mean_quants_corr_v1_patch_eye2eye2));
@@ -484,6 +503,7 @@ for h = 1:numel(hemis)
 end
 
 if ~exist(sprintf('%s/CorrelationMtx_Selectivity_subsampled.mat', Root))
+    % --- Save the per-subject selectivity Data_Combined and the AnalysisParam struct ---
     save(sprintf('%s/CorrelationMtx_Selectivity_subsampled.mat', Root), 'Data_Combined');
     disp('Correlation matrices saved successfully.');
 else

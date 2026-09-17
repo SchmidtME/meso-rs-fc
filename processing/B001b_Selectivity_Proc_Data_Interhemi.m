@@ -7,7 +7,8 @@ function Data_Combined = B001c_Selectivity_Proc_Data_Interhemi(subName, Root, An
 % by applying detrending and high-pass filtering (if specified), and computes 
 % partial correlations between the specified regions of interest (ROI) of each hemisphere. 
 % The function groups beta values into quantiles and computes the mean of 
-% each beta quantle combinations. 
+% each beta quantle combinations. The inter-hemispheric selectivity rs-FC is saved
+% as CorrelationMtx_Selectivity.mat.
 % Authors: Marianna Elisa Schmidt (marianna.schmidt@maxplanckschools.de), Iman Aganj, Shahin Nasr
 
 tic
@@ -38,6 +39,7 @@ labelFolder = fullfile('/space/ardebil/1/users/Others/Marianna/good_subjects_ana
 rsFolder =  fullfile('/space/ardebil/1/users/Others/Marianna/FC_7T_Coronal/Controls/Data_Denoised', [subName], 'bold_Close_Upsampled2');
 
 %% Load and show anatomical data and ODC maps
+% --- For each hemisphere: load the ODC beta map, surfaces/labels, and build the ROI and eye-quantile masks ---
 
 % get folder name where ODC data is located
 d = dir(fullfile(odcFolder, '*Smoothing_0-2.lh')).name(1:end-3); %Stereopsis_TR3_Columnar_Smoothing_0-2
@@ -215,6 +217,7 @@ for h = 1:numel(hemis)
 end
 
 %% Load and show resting-state functional data
+% --- For each session: load the layer target for both hemispheres, trim/preprocess, and compute inter-hemispheric partial correlations ---
 
     % get rs session names
     d = dir(fullfile(rsFolder, '0*'));
@@ -225,15 +228,14 @@ end
     
     fprintf('%s Resting-State Runs were found! \n', num2str(length(rsSessions)))
     
-    %%
-    
     % load data for every session, do detrend & hpf, compute partialcorr, save it to matrix (sessions, partialcorr), then do averaging
+    % --- Session loop: load + preprocess rs data for both hemispheres, then compute inter-hemispheric partial correlations ---
     for sessionNum = 1:length(rsSessions)
         fprintf('Loading Restig-Sate Data Run %s! \n', num2str(sessionNum))
         StrtTime = toc;
         clear rs_v1_patch rs_v1_patchBoth
     
-        % initialize wm and mcpr regressors and rs within patch?
+        % initialize wm and mcpr regressors and rs within patch
         wm = []; mcpr = []; rs_v1_patch{h} = [];
     
         for h = 1:numel(hemis)
@@ -273,15 +275,16 @@ end
             end
         end
     
-        % load the covariate data and append for each session
+        % load the covariate data (white matter + motion) and append for this session
         wm0 = load(fullfile(rsFolder, rsSessions{sessionNumTemp}, 'wm.dat'), '-ascii');
         wm = [wm; wm0(timeSeriesRange{:})];
         mcpr0 = load(fullfile(rsFolder, rsSessions{sessionNumTemp}, 'mcprextreg'), '-ascii');
         mcpr = [mcpr; mcpr0(timeSeriesRange{:},:)];
         % Compute correlations based on the current quantile
         % reorganize the data so that bin_mask_vtx_eye2 vertices are appended below bin_mask_vtx_eye1 vertices
+        % (inter-hemispheric partial correlation: left-hemisphere ROI vs right-hemisphere ROI, regressing out covariates)
         corr_v1_patch = partialcorr(rs_v1_patch{1}', rs_v1_patch{2}', [mcpr(:,1:3) wm]);
-        % Store the correlation matrix for the current quantile
+        % Store the correlation matrix for the current session
         corr_v1_patch_allSess(sessionNum,:,:) = corr_v1_patch;
         %clear corr_v1_patch
     end
@@ -289,6 +292,7 @@ end
     
     
     %% do analysis for mean across sessions
+    % --- Average over sessions; loop over beta-quantile pairs and compute same-eye/diff-eye inter-hemispheric means ---
     fprintf('Preparing the final plots! \n')
     StrtTime = toc;
 
@@ -297,7 +301,7 @@ end
    
             corr_v1_patch_mean = squeeze(mean(corr_v1_patch_allSess(:,:,:), 1));
             
-            % Find the indices where bin_mask_vtx_eye1 and bin_mask_vtx_eye2 are 1
+            % Find the indices where bin_mask_vtx_eye1 and bin_mask_vtx_eye2 are 1 (across both hemispheres)
             idx_eye1_q1_lh = find(bin_mask_vtx_eye1{1}(:,q1) == 1);
             idx_eye1_q1_rh = find(bin_mask_vtx_eye1{2}(:,q1) == 1);
             idx_eye1_q2_lh = find(bin_mask_vtx_eye1{1}(:,q2) == 1);
@@ -308,12 +312,13 @@ end
             idx_eye2_q2_rh = find(bin_mask_vtx_eye2{2}(:,q2) == 1);
 
             % Filter the correlation matrix based on these rows and columns
+            % (pool the cross-hemisphere submatrices for same-eye, eye1-eye1, eye2-eye2 and mixed-eye pairs)
             corr_v1_patch_eye1eye1 = [corr_v1_patch_mean(idx_eye1_q1_lh, idx_eye1_q2_rh); corr_v1_patch_mean(idx_eye1_q2_lh, idx_eye1_q1_rh)];
             corr_v1_patch_eye2eye2 = [corr_v1_patch_mean(idx_eye2_q1_lh, idx_eye2_q2_rh); corr_v1_patch_mean(idx_eye2_q2_lh, idx_eye2_q1_rh)];
             corr_v1_patch_eye1eye2_1 = [corr_v1_patch_mean(idx_eye1_q1_lh, idx_eye2_q2_rh); corr_v1_patch_mean(idx_eye1_q2_lh, idx_eye2_q1_rh)]; 
             corr_v1_patch_eye1eye2_2 = [corr_v1_patch_mean(idx_eye2_q1_lh, idx_eye1_q2_rh); corr_v1_patch_mean(idx_eye2_q2_lh, idx_eye1_q1_rh)];
             
-            % Pad corr_v1_patch_eye1eye2_1 and corr_v1_patch_eye1eye2_2 for concatenation
+            % Pad corr_v1_patch_eye1eye2_1 and corr_v1_patch_eye1eye2_2 so the two mixed-eye orientations can be concatenated
             [size1_r, size1_c] = size(corr_v1_patch_eye1eye2_1);
             [size2_r, size2_c] = size(corr_v1_patch_eye1eye2_2);
             max_rows = max(size1_r, size2_r);
@@ -336,6 +341,7 @@ end
             corr_v1_patch_eye2eye2_padded(1:size2_r, 1:size2_c) = corr_v1_patch_eye2eye2;
             corr_v1_patch_same_eye = [corr_v1_patch_eye1eye1_padded; corr_v1_patch_eye2eye2_padded];
             
+            % Average each inter-hemispheric pair-type into a single scalar mean
             Same_Eye = mean(corr_v1_patch_same_eye(:)', 'omitnan');
             Eye1 = mean(corr_v1_patch_eye1eye1(:)', 'omitnan');
             Eye2 = mean(corr_v1_patch_eye2eye2(:)', 'omitnan');
@@ -343,8 +349,10 @@ end
             Diff_Eye_eye1eye2 = mean(corr_v1_patch_eye1eye2_1(:)', 'omitnan');
             Diff_Eye_eye2eye1 = mean(corr_v1_patch_eye1eye2_2(:)', 'omitnan');
 
+            % store raw inter-hemispheric means into Data_Combined (6 pair-type measures)
             Data_Combined(1:6, q1, q2, 1) = [Same_Eye' Eye1' Eye2' Diff_Eye_concat' Diff_Eye_eye1eye2' Diff_Eye_eye2eye1'];
             % z-transformation
+            % (Fisher z-transform each of the 6 inter-hemispheric means; stored in z-slot)
             Same_Eye_z = 0.5 * log((1 + Same_Eye) ./ (1 - Same_Eye));
             Eye1_z = 0.5 * log((1 + Eye1) ./ (1 - Eye1));
             Eye2_z = 0.5 * log((1 + Eye2) ./ (1 - Eye2));
