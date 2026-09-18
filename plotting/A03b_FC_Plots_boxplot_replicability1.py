@@ -51,7 +51,8 @@ ylabel_text = ('% change of z-transformed Pearson r (weighted normalization)' if
 
 #%% load data
 
-
+# Preallocate arrays to hold per-subject values
+# (subjects x layers x distance quantiles)
 alike_values = np.zeros((len(subjectFolders), len(layers), num_quantiles))
 unalike_values = np.zeros((len(subjectFolders), len(layers), num_quantiles))
 diff_values = np.zeros((len(subjectFolders), len(layers), num_quantiles))
@@ -65,7 +66,7 @@ for version_index, version in enumerate(layers):
     for sub_index, subName in enumerate(subjectFolders):
         subDir = os.path.join(dataDir, subName)
         
-        # load overall FC
+        # Load the per-subject rs-FC file and extract the overall connectivity
         data_mat_name = 'CorrelationMtx_FC_subsampled_1.mat'
         data_mat_path = os.path.join(subDir, data_mat_name)
         
@@ -76,14 +77,16 @@ for version_index, version in enumerate(layers):
         data_mat = sio.loadmat(data_mat_path)
         Data_Combined = np.squeeze(data_mat['Data_Combined'])
         
-        # Apply Fisher Transform or not
+        # Apply Fisher Transform or not (last axis selects z- vs r-values)
         Data_Combined = Data_Combined[:, :, :, :, 1] if fisher_transform else Data_Combined[:, :, :, :, 0]
         
-        # Average across hemispheres (axis=1) and distance quantiles (axis=0)
+        # Average across distance quantiles (axis 0), hemispheres (axis 3) and the 
+        # remaining dimension (axis 4); keep the distance profile of the overall FC
         Data_Combined_avg = np.mean(np.mean(np.mean(Data_Combined, axis=4), axis=3), axis=2)
         
         FC_values[sub_index, version_index :] = Data_Combined_avg[:,0]
         
+        # Load the per-subject selectivity (alike/unalike) file
         data_mat_name = 'CorrelationMtx_Selectivity_subsampled_1.mat'
         data_mat_path = os.path.join(subDir, data_mat_name)
         data_mat = sio.loadmat(data_mat_path)
@@ -94,15 +97,20 @@ for version_index, version in enumerate(layers):
         else:
             Data_Combined = Data_Combined[:,:,:,:,:,0]
 
+        # Average over the two distance-quantile indices (redundant trailing axes)
         Data_Combined = np.mean(np.mean(Data_Combined,axis=3),axis=3)
+        # Keep the chosen eye condition (index 0-2) and unalike (index 3)
         Data_Combined = Data_Combined[:,[eye,3],:]
         
-        Data_Combined = np.mean(Data_Combined, axis=2) # Average across hemispheres (axis 2)
+        Data_Combined = np.mean(Data_Combined, axis=2) # Average across hemispheres
 
+        # Store alike (index 0) and unalike (index 1) values per quantile
         alike_values[sub_index, version_index, :] = Data_Combined[:, 0]
         unalike_values[sub_index, version_index :] = Data_Combined[:, 1]
         
+        # Compute the selectivity (alike - unalike), with optional normalization
         if normalization == 'weighted':
+            # Weighted normalization: express alike/unalike as % of their sum
             Data_Combined_norm = Data_Combined.copy()
 
             Data_Combined_alike_unalike = (Data_Combined_norm[:, 0]) + (Data_Combined_norm[:, 1])
@@ -112,7 +120,7 @@ for version_index, version in enumerate(layers):
             diff_values[sub_index, version_index, :] = Data_Combined_norm[:, 0] - Data_Combined_norm[:,1]        
 
         elif normalization == 'not_weighted':
-            
+            # Not-weighted normalization: express alike/unalike as % of the overall FC
             Data_Combined_norm = Data_Combined.copy()
 
             Data_Combined_norm[:, 0] = (Data_Combined_norm[:, 0] / FC_values[sub_index,:,:]) * 200
@@ -121,7 +129,7 @@ for version_index, version in enumerate(layers):
             diff_values[sub_index, version_index, :] = Data_Combined_norm[:, 0] - Data_Combined_norm[:,1] 
             
         else:
-
+            # No normalization: raw difference between alike and unalike
             diff_values[sub_index, :,:] = alike_values[sub_index, :,:] - unalike_values[sub_index, :,:]
                     
             
@@ -159,7 +167,7 @@ for q in range(num_quantiles):
         data_list_sel.append([subj_val, q+1])
 df_selectivity = pd.DataFrame(data_list_sel, columns=['Value', 'Quantile'])
 
-#%%
+#%% Plot split violin (alike/unalike) for the replicability subject subset
 
 # Brighter, CUD-friendly colors with higher transparency (alpha=0.4)
 alike_color   = (1.0, 0.8, 0.3, 0.4)  # yellowish-orange

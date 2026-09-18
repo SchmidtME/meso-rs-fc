@@ -56,6 +56,9 @@ avg_values_unalike = np.zeros((num_layers, num_quantiles, num_quantiles))
 avg_values_diff = np.zeros((num_layers, num_quantiles, num_quantiles))
 avg_values_FC = np.zeros((num_layers, num_quantiles, num_quantiles))
 
+#%% load data
+
+# Loop over each cortical-depth layer version (each a V1 subregion analysis)
 for version_index, (version, short_version) in enumerate(zip(layers, short_layers)):
     dataDir = os.path.join(baseDir, version)
     subjectFolders = ['haas',
@@ -70,6 +73,7 @@ for version_index, (version, short_version) in enumerate(zip(layers, short_layer
         'imyy',
         'auil',
         'myla'] #  [f for f in os.listdir(dataDir) if os.path.isdir(os.path.join(dataDir, f)) and f not in ['.', '..']]
+    # Per-subject arrays for this layer (subjects x beta quantile 1 x beta quantile 2)
     alike_values = np.zeros((len(subjectFolders), num_quantiles, num_quantiles))
     unalike_values = np.zeros((len(subjectFolders), num_quantiles, num_quantiles))
     diff_values = np.zeros((len(subjectFolders), num_quantiles, num_quantiles))
@@ -81,7 +85,7 @@ for version_index, (version, short_version) in enumerate(zip(layers, short_layer
         
         subDir = os.path.join(dataDir, subName)
         
-        # load overall FC
+        # Load the per-subject overall rs-FC and average over the distance quantiles
         data_mat_name = 'CorrelationMtx_FC_beta_subsampled.mat'
         data_mat_path = os.path.join(subDir, data_mat_name)
         
@@ -92,21 +96,23 @@ for version_index, (version, short_version) in enumerate(zip(layers, short_layer
         data_mat = sio.loadmat(data_mat_path)
         Data_Combined = np.squeeze(data_mat['Data_Combined'])
         
-        # Apply Fisher Transform or not
+        # Apply Fisher Transform or not (last axis selects z- vs r-values)
         Data_Combined = Data_Combined[:, 0, :, :, :, 1] if fisher_transform else Data_Combined[ :, 0, :, :, :, 0]
         
-        # Average across hemispheres (axis=1) and distance quantiles (axis=0)
+        # Average across the distance-quantile and hemisphere dimensions
         Data_Combined_avg = np.mean(np.mean(Data_Combined,axis=1),axis=0)
         
         FC_values[sub_index, :, :] = Data_Combined_avg
         
         
+        # Load the per-subject selectivity (alike/unalike) file
         data_mat_name = 'CorrelationMtx_Selectivity_subsampled.mat'
         data_mat_path = os.path.join(subDir, data_mat_name)
 
         if os.path.exists(data_mat_path):
             data_mat = sio.loadmat(data_mat_path)
             Data_Combined = np.squeeze(data_mat['Data_Combined'])
+            # Apply Fisher Transform or not
             if fisher_transform == 1:
                 Data_Combined = Data_Combined[:,:,:,:,:,1]
             else:
@@ -115,23 +121,29 @@ for version_index, (version, short_version) in enumerate(zip(layers, short_layer
 
             Data_Combined2 = Data_Combined
             del Data_Combined
+            # Keep the chosen eye condition (index 0-2) and unalike (index 3)
             Data_Combined = Data_Combined2[:,[eye,3],:,:,:]
 
-            # Average across hemispheres (axis 2) and distances
+            # Average across hemispheres (axis 2), optionally excluding the first 
+            # distance quantiles, and collate the remaining dims per subject
             Data_Combined_avg = np.mean(np.mean(Data_Combined[exclude_dist_quant:len(short_quantiles),:,:,:,:], axis=2), axis=0)
 
-            # Store values for each quantile
+            # Store alike/unalike values per beta-quantile combination
             alike_values[sub_index, :,:] = Data_Combined_avg[0,:,:]
             unalike_values[sub_index, :,:] = Data_Combined_avg[1,:,:]
             diff_values[sub_index, :,:] = alike_values[sub_index, :,:] - unalike_values[sub_index, :,:]
            
+    # Average the per-subject matrices across subjects for this layer
     avg_values_alike[version_index, :,:] = np.mean(alike_values, axis=0)
     avg_values_unalike[version_index, :,:] = np.mean(unalike_values, axis=0)
     avg_values_diff[version_index, :,:] = np.mean(diff_values, axis=0)
     avg_values_FC[version_index, :,:] = np.mean(FC_values, axis=0)
     
 #%%
+#%% Plot labelled figure: rs-FC and selectivity (Alike - Unalike) matrices
 
+# 3x2 grid: rows = cortical depth (superficial/middle/deep),
+# columns = rs-FC / selectivity difference
 fig, axes = plt.subplots(3, 2, figsize=(11, 15), gridspec_kw={'height_ratios': [1, 1, 1], 'hspace': 0.2, 'wspace': 0})
 
 # Titles on the left of each row

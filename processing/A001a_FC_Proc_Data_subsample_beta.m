@@ -11,7 +11,9 @@ function Data_Combined = A001a_FC_Proc_Data_subsample_beta(subName, Root, Analys
 % It subsamples vertex pairs so that alike and unalike vertex pairs match
 % distance distributions for each beta quantile. The resulting indices of included
 % vertex pairs are then saved for further analyses.
-% Lastly, it computes the mean for each distance quantiles. 
+% Lastly, it computes the mean for each distance quantiles. The mean rs-FC per
+% distance/beta quantile is saved as CorrelationMtx_FC*.mat and the subsample
+% indices in CorrelationMtx_FC_Params_subsampled.mat.
 % Authors: Marianna Elisa Schmidt (marianna.schmidt@maxplanckschools.de), Iman Aganj, Shahin Nasr
 
 warning('off', 'all');
@@ -55,6 +57,7 @@ folder = '/space/ardebil/1/users/Others/Marianna/FC_7T_Coronal/Controls/Data_Den
 rsFolder =  fullfile(folder, [subName], 'bold_Close_Upsampled2');
 
 %% Load and show anatomical data and ODC maps
+% --- For each hemisphere: load the ODC beta map, surfaces/labels, and build the ROI masks ---
 
 % get folder name where ODC data is located
 d = dir(fullfile(odcFolder, '*Smoothing_0-2.lh')).name(1:end-3); %Stereopsis_TR3_Columnar_Smoothing_0-2
@@ -65,7 +68,8 @@ for h = 1:numel(hemis)
     hemi = hemis{h};
     fprintf('Loading %s Data ... \n', hemi)
     StrtTime = toc;
-    % load ODC map
+    % load ODC differential map (signed beta: sign = ocular preference, magnitude = preference strength)
+    fprintf('Loading %s ODC Map \n', hemi)
     fprintf('Loading %s ODC Map \n', hemi)
     dataFile_odc = fullfile(odcFolder, [d '.' hemi], 'R_C', [hemi '.ffx.osgm.wls'], 'beta.nii');
     sig_odc{h} = load_nifti(dataFile_odc); 
@@ -83,7 +87,8 @@ for h = 1:numel(hemis)
     occ_patch{h} = read_patch(fullfile(anatFolder, 'surf', sprintf('%s.%s', hemi,AnalysisParam.ROIpatch))); 
     occ_patch{h}.ind = occ_patch{h}.ind+1;
 
-       % load labels defined on upsampled retinotopy
+    % load labels defined on upsampled retinotopy
+    % (select the ROI vertices from V1 or one of its subregions based on AnalysisParam.ROI)
     if strcmp(AnalysisParam.ROI, 'V1')
         roi_label = read_ROIlabel(fullfile(labelFolder, [hemi '.V1_Upsampled_Rtopy.label']));
     elseif strcmp(AnalysisParam.ROI, 'V2')
@@ -115,6 +120,7 @@ for h = 1:numel(hemis)
     end
 
     % crop occipital patch to V1 patch
+    % (keep only occipital-patch vertices that belong to the selected ROI label)
     v1_patch{h} = struct('npts','ind','x','y','z','vno');
     v1_patch{h}.ind = occ_patch{h}.ind(ismember(occ_patch{h}.ind, roi_label));
     v1_patch{h}.x = occ_patch{h}.x(ismember(occ_patch{h}.ind, roi_label));
@@ -124,11 +130,13 @@ for h = 1:numel(hemis)
     v1_patch{h}.npts = length(v1_patch{h}.ind); 
 
     % create binary mask of vertices that are included in the roi
+    % (occipital-patch mask and within-ROI V1 mask over the whole-brain vertex set)
     bin_mask_vtx_occ_patch{h} = false(size(vtx{h},1),1); bin_mask_vtx_occ_patch{h}(occ_patch{h}.ind) = true;
     bin_mask_vtx_v1_patch{h} = false(size(vtx{h},1),1); 
     bin_mask_vtx_v1_patch{h}(v1_patch{h}.ind) = true;
 
     % create binary masks for the two eyes just within V1 based on quantiles    
+    % (negative ODC values -> eye1, positive ODC values -> eye2, binned into nQuant beta quantiles)
     % Extract masked values
     masked_values = sig_odc{h}(bin_mask_vtx_v1_patch{h});   
     % Separate negative and positive values
@@ -170,6 +178,8 @@ for h = 1:numel(hemis)
     AnalysisParam.num_included_vertices_eye1{h} = sum(bin_mask_vtx_eye1{h},'all');
     AnalysisParam.num_included_vertices_eye2{h} = sum(bin_mask_vtx_eye2{h},'all');
 
+    % balance vertex counts across beta quantiles
+    % (if one quantile has more vertices than another, drop one so all are equal in size)
     for q1 = 1:numel(quantile_beta_thresholds) 
         for q2 = 1:numel(quantile_beta_thresholds)
             % sometimes quantiles include one vertex more than the other, so one random vertex is excluded
@@ -207,6 +217,8 @@ for h = 1:numel(hemis)
     end
 
     % only include fac and vtx within v1 patch
+    % (crop the whole-brain faces/vertices to the occipital and V1 patch geometry;
+    %  re-index faces so they reference only in-patch vertices)
     nonbin_mask_vtx_v1_patch = double(bin_mask_vtx_v1_patch{h}); 
     nonbin_mask_vtx_v1_patch(bin_mask_vtx_v1_patch{h}) = 1:sum(bin_mask_vtx_v1_patch{h});
 
@@ -226,6 +238,7 @@ for h = 1:numel(hemis)
 end
 
 %% Create distance map for vertices
+% --- Compute pairwise Euclidean distances between the V1-patch vertices (per hemisphere) ---
 
 fprintf('Creating Distance Matrix! \n')
 StrtTime = toc;
@@ -240,6 +253,7 @@ end
 fprintf('Done in %s s!\n\n', num2str(toc- StrtTime))
 
 %% Load and show resting-state functional data
+% --- For each session: load the layer target, trim/preprocess the time series, and compute partial correlations ---
 
 % get rs session names
 d = dir(fullfile(rsFolder, '0*')); 
@@ -250,17 +264,18 @@ end
 
 fprintf('%s Resting-State Runs were found! \n', num2str(length(rsSessions)))
 
-%%
-
 % load data for every session, do detrend & hpf, compute partialcorr, save it to matrix (sessions, partialcorr), then do averaging
+
+% --- Session loop: load + preprocess rs data for both hemispheres, then compute partial correlations ---
 for sessionNum = 1:length(rsSessions)
     fprintf('Loading Restig-Sate Data Run %s! \n', num2str(sessionNum))
     StrtTime = toc;
     clear rs_v1_patch rs_v1_patchBoth
 
-    % initialize wm and mcpr regressors and rs within patch?
+    % initialize wm and mcpr regressors and rs within patch
     wm = []; mcpr = []; rs_v1_patch{h} = [];
 
+    % hemisphere loop: load the layer target for this session within the V1 patch
     for h = 1:numel(hemis)
         hemi = hemis{h};
         fprintf('Loading %s! \n', hemi)
@@ -270,7 +285,7 @@ for sessionNum = 1:length(rsSessions)
         sessionNumTempAll = sessionNum;
         
         for sessionNumTemp = sessionNumTempAll
-            % load the rs data
+            % load the rs surface overlay (.mgz) for the requested layer target
             fprintf('The target file is : %s \n', [hemi Trg_File])
 
             dataFile_rs = fullfile(rsFolder, rsSessions{sessionNumTemp}, [hemi Trg_File]);
@@ -280,11 +295,12 @@ for sessionNum = 1:length(rsSessions)
             fprintf('The original resting state data martix is : %d x %d \n', size(rs))
             fprintf('We will use these data points: %d - %d \n', [StrtPnt StrtPnt+TmSeries_Length])
             
+            % trim time series to the analysis window
             rs = rs(:, [StrtPnt:StrtPnt+TmSeries_Length]);
             fprintf('The used resting state data martix is : %d x %d \n', size(rs))
 
 
-            % loads volumes and 4x4 vox2ras transform
+            % additional preprocessing: detrending and high-pass filtering (if enabled)
             if detrending
                 rs = detrend(rs', 2)';
             end
@@ -293,24 +309,22 @@ for sessionNum = 1:length(rsSessions)
                 rs = highpass(rs', 0.01, 1/4)';
             end
 
-            % only consider rs within v1 patch
+            % only consider rs within v1 patch (keep in-patch vertices, append across sessions)
             rs_v1_patch{h} = [rs_v1_patch{h} squeeze(rs(bin_mask_vtx_v1_patch{h},:))];
         end
     end
 
-    % load the covariate data and append for each session
+    % load the covariate data (white matter + motion) and append for this session
     wm0 = load(fullfile(rsFolder, rsSessions{sessionNumTemp}, 'wm.dat'), '-ascii');
     wm = [wm; wm0(timeSeriesRange{:})];
     mcpr0 = load(fullfile(rsFolder, rsSessions{sessionNumTemp}, 'mcprextreg'), '-ascii');
     mcpr = [mcpr; mcpr0(timeSeriesRange{:},:)];
 
-    % Correlation between different eyes, same hemispheres
-    %% Initialize Quantile-Based Correlation Storage
+    % compute partial correlation between vertices within each hemisphere,
+    % regressing out motion (mcpr) and white-matter (wm) covariates; store per session
     for h = 1:numel(hemis)
         hemi = hemis{h};
-        % Compute correlations based on the current quantile
         corr_v1_patch = partialcorr(rs_v1_patch{h}', [mcpr(:,1:3) wm]);
-        % Store the correlation matrix for the current quantile
         corr_v1_patch_allSess{h}(sessionNum,:,:) = corr_v1_patch;
         clear corr_v1_patch
     end
@@ -318,6 +332,7 @@ for sessionNum = 1:length(rsSessions)
 end
 
 %% do analysis for mean across sessions
+% --- Average over sessions, group by beta/distance quantiles, subsample and compute means ---
 fprintf('Saving the data! \n')
 StrtTime = toc;
 
@@ -336,16 +351,19 @@ for h = 1:numel(hemis)
             idx_eye2_q2 = find(bin_mask_vtx_eye2{h}(:,q2) == 1);
             
             % Filter the correlation matrix based on these rows and columns
+            % (extract submatrices for same-eye, both-eye, and different-eye vertex pairs)
             corr_v1_patch_eye1eye1 = corr_v1_patch_mean(idx_eye1_q1, idx_eye1_q2);
             corr_v1_patch_eye2eye2 = corr_v1_patch_mean(idx_eye2_q1, idx_eye2_q2);
             corr_v1_patch_eye1eye2 = [corr_v1_patch_mean(idx_eye1_q1, idx_eye2_q2); corr_v1_patch_mean(idx_eye1_q2, idx_eye2_q1)];
 
             % filter distance matrix for distances of vertices eye1 with eye1, eye2 with eye2 and eye1 with eye2
+            % (extract the corresponding distance submatrices for the same pair groupings)
             dist_v1_patch_eye1eye1 = dist_v1_patch{h}(idx_eye1_q1, idx_eye1_q2);
             dist_v1_patch_eye2eye2 = dist_v1_patch{h}(idx_eye2_q1, idx_eye2_q2);
             dist_v1_patch_eye1eye2 = [dist_v1_patch{h}(idx_eye1_q1, idx_eye2_q2); dist_v1_patch{h}(idx_eye1_q2, idx_eye2_q1)];
 
             % concatenate eye1eye1 and eye2eye2
+            % (pad to a common size so same-eye pairs (eye1+eye2) can be pooled into one block)
             % pad matrices for concatenation
             max_rows = max(size(corr_v1_patch_eye1eye1), size(corr_v1_patch_eye2eye2));
             max_cols = max(size(corr_v1_patch_eye1eye1), size(corr_v1_patch_eye2eye2));
@@ -364,6 +382,7 @@ for h = 1:numel(hemis)
             
             % subsampling
             % quantiled for alike and unalike together
+            % (compute 100 fine distance bins jointly across same-eye + different-eye pairs)
             dist_v1_patch_concatenated = vertcat(dist_v1_patch_same_eye(:), dist_v1_patch_eye1eye2(:));
             dist_quantiles_high = [3 quantile(dist_v1_patch_concatenated(dist_v1_patch_concatenated>3), 100-1) inf];
             % number of vertices per quantiles
@@ -371,6 +390,7 @@ for h = 1:numel(hemis)
             quants_number_same_eye = arrayfun(@(i) size(dist_v1_patch_same_eye(dist_v1_patch_same_eye(:)>dist_quantiles_high(i) & dist_v1_patch_same_eye(:)<=dist_quantiles_high(i+1)), 1), 1:100);
             
             % quantile data
+            % (bin the correlation and distance values into the 100 fine distance bins)
             dist_v1_patch_eye1eye2_quants = cell(100, 1); 
             dist_v1_patch_same_eye_quants = cell(100, 1); 
             corr_v1_patch_eye1eye2_quants = cell(100, 1); 
@@ -394,6 +414,8 @@ for h = 1:numel(hemis)
             end
 
             % subsampling
+            % (per fine distance bin, subsample the larger group so alike/unalike pair counts match;
+            %  the selected-pair indices are saved for reuse by the selectivity analyses)
             dist_v1_patch_eye1eye2_subsampled = cell(100, 1);
             dist_v1_patch_same_eye_subsampled = cell(100, 1);
             corr_v1_patch_eye1eye2_subsampled = cell(100, 1);
@@ -437,6 +459,7 @@ for h = 1:numel(hemis)
             corr_v1_patch_same_eye_subsampled_concat = vertcat(corr_v1_patch_same_eye_subsampled{:});
 
             % 10 distance quantiles
+            % (collapse the subsampled pool back into 10 coarse distance quantiles)
             
             data_concat = vertcat(dist_v1_patch_eye1eye2_subsampled_concat, dist_v1_patch_same_eye_subsampled_concat);
             
@@ -446,17 +469,20 @@ for h = 1:numel(hemis)
             dist_v1_patch_subsampled_concat = vertcat(dist_v1_patch_eye1eye2_subsampled_concat, dist_v1_patch_same_eye_subsampled_concat);
             
             % mean for distance quantiles
+            % (average the rs-FC within each of the 10 distance quantiles)
             quants_corr_v1_patch{h} = dist_quantiles_10_fin;
             mean_quants_corr_v1_patch = arrayfun(@(i) mean(corr_v1_patch_subsampled_concat(dist_v1_patch_subsampled_concat>quants_corr_v1_patch{h}(i) & dist_v1_patch_subsampled_concat<=quants_corr_v1_patch{h}(i+1)), "omitnan"), 1:nQuant);
 
             
             Data_Combined(1:nQuant, 1, h, q1, q2, 1) = [mean_quants_corr_v1_patch'];
             % z-transformation
+            % (Fisher z-transform the correlation means and store alongside the raw r values)
             mean_quants_corr_v1_patch_z = 0.5 * log((1 + mean_quants_corr_v1_patch) ./ (1 - mean_quants_corr_v1_patch));
             Data_Combined(1:nQuant, 1, h, q1, q2, 2) = [mean_quants_corr_v1_patch_z'];
             
             if saveFigures && (q1 == 5) && (q2 == 5)
                 % figure of distance distribution
+                % (diagnostic histograms of the subsampled alike/unalike distance distributions)
                 cnt = cnt + 1;
                 figure(cnt)
     
@@ -497,6 +523,7 @@ end
 
 
 % if ~exist(sprintf('%s/CorrelationMtx_FC_subsampled_%d.mat', Root, s))
+% --- Save the per-subject results: the Data_Combined matrix and the AnalysisParam struct (incl. subsample indices) ---
     save(sprintf('%s/CorrelationMtx_FC_subsampled.mat', Root), 'Data_Combined');
     disp('Correlation matrices saved successfully.');
 % else

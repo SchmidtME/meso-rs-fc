@@ -85,9 +85,11 @@ avg_values_diff = np.zeros((num_layers, num_quantiles, num_quantiles))
 
 #%% load data
 
+# Loop over each cortical-depth layer version
 for version_index, (version, short_version) in enumerate(zip(layers, short_layers)):
     dataDir = os.path.join(baseDir, version)
    
+    # Per-subject arrays for this layer (subjects x beta quantile 1 x beta quantile 2)
     alike_values = np.zeros((len(subjectFolders), num_quantiles, num_quantiles))
     unalike_values = np.zeros((len(subjectFolders), num_quantiles, num_quantiles))
     diff_values = np.zeros((len(subjectFolders), num_quantiles, num_quantiles))
@@ -100,6 +102,7 @@ for version_index, (version, short_version) in enumerate(zip(layers, short_layer
         if os.path.exists(data_mat_path):
             data_mat = sio.loadmat(data_mat_path)
             Data_Combined = np.squeeze(data_mat['Data_Combined'])
+            # Apply Fisher Transform or not (last axis selects z- vs r-values)
             if fisher_transform == 1:
                 Data_Combined = Data_Combined[:,:,:,:,:,1]
             else:
@@ -108,22 +111,27 @@ for version_index, (version, short_version) in enumerate(zip(layers, short_layer
 
             Data_Combined2 = Data_Combined
             del Data_Combined
+            # Keep the chosen eye condition (index 0-2) and unalike (index 3)
             Data_Combined = Data_Combined2[:,[eye,3],:,:,:]
             
-            # Average across hemispheres (axis 2) and distances
+            # Average across hemispheres (axis 2), optionally excluding the first 
+            # distance quantiles, and collate the remaining dims per subject
             Data_Combined_avg = np.mean(np.mean(Data_Combined[exclude_dist_quant:len(short_quantiles),:,:,:,:], axis=2), axis=0)
             
-            # Store values for each quantile
+            # Store alike/unalike values per beta-quantile combination
             alike_values[sub_index, :,:] = Data_Combined_avg[0,:,:]
             unalike_values[sub_index, :,:] = Data_Combined_avg[1,:,:]
             diff_values[sub_index, :,:] = alike_values[sub_index, :,:] - unalike_values[sub_index, :,:]
             
+    # Average the per-subject matrices across subjects for this layer
     avg_values_alike[version_index, :,:] = np.mean(alike_values, axis=0)
     avg_values_unalike[version_index, :,:] = np.mean(unalike_values, axis=0)
     avg_values_diff[version_index, :,:] = np.mean(diff_values, axis=0)
     
 #%% figure with labels
 
+# 3x3 grid: rows = cortical depth (superficial/middle/deep),
+# columns = alike / unalike / difference
 fig, axes = plt.subplots(3, 3, figsize=(14, 13), gridspec_kw={'height_ratios': [1, 1, 1], 'hspace': 0.2, 'wspace': 0.1})
 
 # Titles on the left of each row

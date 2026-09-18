@@ -3,31 +3,35 @@ clear all
 clc
 
 % Description:
-% This script corresponds to Analysis A - The effect of distance on rs-FC 
+% Driver script for Analysis A - The effect of distance on rs-FC 
 % and selectivity and to Figure 2 of the manuscript.
-% This script runs subfunctions to calculate the rs-FC for each subject and at
+% It defines the analysis parameters, loops over cortical layers and subjects and
+% runs subfunctions to calculate the rs-FC for each subject at
 % different cortical depth in V1 and subregions of V1. It subsamples the vertex
 % pairs to match distance distribution of alike and unalike ocular polarity
 % vertex pairs for every beta quantile combination.
 % It specifies the input parameters to the subfunctions to run additional 
 % preprocessing (such as detrending and high-pass filtering), and to save the 
-% mean correlation for a number of distances.
+% mean correlation for a number of distances. The per-subject .mat results are
+% saved as CorrelationMtx_FC* / ..._Params_subsampled.mat.
 % Authors: Marianna E. Schmidt (marianna.schmidt@maxplanckschools.de), Iman Aganj, Shahin Nasr
 
 %% Specifications
+% --- Define the ROI (patch + name), the connectivity type and the subjects/layers to process ---
 
 % Define the region of interest (ROI) patch and specific area of interest (e.g., V1, V2, etc.)
 AnalysisParam.ROIpatch = "V1_patch.flat"; % Patch file for the ROI
 AnalysisParam.ROI = 'V1'; % Choose the ROI: V1, V2, V3, V4, V1_Center, V1_Periphery
-AnalysisParam.Type='intrahemispheric'; 
+AnalysisParam.Type='intrahemispheric'; % intrahemispheric = within one hemisphere; interhemispheric = between hemispheres
 
 % List of subjects to process
 Sbjs = {'myla'}%aman', 'ylri', 'auil', 'arak', 'aroo', 'atib', 'imyy', 'chss', 'evad', 'haas', 'rcgr', 'atev', 'uces', 'myla', 'main', 'ridg', 'uces', 'oban'};
 
-% Layers of interest for analysis
+% Layers of interest for analysis (radially smoothed layer targets)
 layers = {'0-10', '0-2', '4-6', '8-10'};
 
 %% Data Organization and Preprocessing Parameters
+% --- Set time-series window, quantile counts, distance threshold and preprocessing flags ---
 
 % Exclude the first 9 volumes from the time series for each subject
 AnalysisParam.StrtPnt = 10; % Start from volume 10
@@ -41,17 +45,18 @@ AnalysisParam.detrending = 1; % Enable detrending of the time series
 AnalysisParam.hpf = 1; % Enable high-pass filtering
 
 %% Process Data for Each Layer and Subject
+% --- Outer loop: for each layer, run the per-subject processing function ---
 
 % Loop through each layer
 for layer = 1:length(layers)
     
-    % Define the target file for the current layer
+    % Define the target file for the current layer (surface overlay name with layer tag)
     TrgFile = sprintf(['.fmcpr.sm0.self.midgray.00.nb1_rad','%s'], layers{layer});
 
-    % Set the root directory for results
+    % Set the root directory for results (one per ROI / layer / connectivity type)
     Root = sprintf('/space/ardebil/1/users/Others/Marianna/FC_7T_Coronal/Controls/Results/%s_layers_%s_%s', AnalysisParam.ROI, layers{layer}, AnalysisParam.Type); 
 
-    % Parallel processing for each subject
+    % Inner loop over subjects (and subsampling iterations) calling the per-subject function
     for i = 1:length(Sbjs)
 
             for s = 1 % subsampling iteration

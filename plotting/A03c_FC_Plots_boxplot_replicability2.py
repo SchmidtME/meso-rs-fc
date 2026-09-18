@@ -51,7 +51,8 @@ ylabel_text = ('% change of z-transformed Pearson r (weighted normalization)' if
 
 #%% load data
 
-
+# Preallocate arrays to hold per-subject values
+# (subjects x layers x distance quantiles)
 alike_values = np.zeros((len(subjectFolders), len(layers), num_quantiles))
 unalike_values = np.zeros((len(subjectFolders), len(layers), num_quantiles))
 diff_values = np.zeros((len(subjectFolders), len(layers), num_quantiles))
@@ -65,24 +66,30 @@ for version_index, version in enumerate(layers):
     for sub_index, subName in enumerate(subjectFolders):
         subDir = os.path.join(dataDir, subName)
         
+        # Load the per-subject selectivity (alike/unalike) file
         data_mat_name = 'CorrelationMtx_Selectivity_subsampled.mat'
         data_mat_path = os.path.join(subDir, data_mat_name)
         data_mat = sio.loadmat(data_mat_path)
         Data_Combined = np.squeeze(data_mat['Data_Combined'])
         
+        # Apply Fisher Transform or not (last axis selects z- vs r-values)
         if fisher_transform == 1:
             Data_Combined = Data_Combined[:,:,:,:,:,1]
         else:
             Data_Combined = Data_Combined[:,:,:,:,:,0]
 
+        # Average over the two distance-quantile indices (redundant trailing axes)
         Data_Combined = np.mean(np.mean(Data_Combined,axis=3),axis=3)
+        # Keep the chosen eye condition (index 0-2) and unalike (index 3)
         Data_Combined = Data_Combined[:,[eye,3],:]
         
-        Data_Combined = np.mean(Data_Combined, axis=2) # Average across hemispheres (axis 2)
+        Data_Combined = np.mean(Data_Combined, axis=2) # Average across hemispheres
 
+        # Store alike (index 0) and unalike (index 1) values per quantile
         alike_values[sub_index, version_index, :] = Data_Combined[:, 0]
         unalike_values[sub_index, version_index :] = Data_Combined[:, 1]
 
+        # No normalization for this variant: raw difference between alike and unalike
         diff_values[sub_index, :,:] = alike_values[sub_index, :,:] - unalike_values[sub_index, :,:]
                     
             
@@ -120,7 +127,7 @@ for q in range(num_quantiles):
         data_list_sel.append([subj_val, q+1])
 df_selectivity = pd.DataFrame(data_list_sel, columns=['Value', 'Quantile'])
 
-#%%
+#%% Plot split violin (alike/unalike) for the second replicability subject subset
 
 # Brighter, CUD-friendly colors with higher transparency (alpha=0.4)
 alike_color   = (1.0, 0.8, 0.3, 0.4)  # yellowish-orange

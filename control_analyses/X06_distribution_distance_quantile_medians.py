@@ -1,9 +1,14 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Created on Tue Feb  4 03:17:34 2025
+This script plots the median ocular-preference (beta) value within each beta
+quantile, averaged across subjects. It loads the per-subject beta quantile
+medians from the subsampled rs-FC parameter files, averages the absolute beta
+values over hemispheres and eyes, and plots each subject's profile together with
+the mean across subjects. This corresponds to Figure 2 of the supplementary
+material of the manuscript.
 
-@author: ms1454
+@author: Marianna Elisa Schmidt (marianna.schmidt@maxplanckschools.de)
 """
 
 import os
@@ -12,6 +17,8 @@ import scipy.io as sio
 import h5py
 import numpy as np
 import matplotlib.pyplot as plt
+
+#%% Specification of paths and save directory
 
 save_figures = 1
 if save_figures:
@@ -37,7 +44,9 @@ subjects = ['haas',
    'auil',
    'myla']
 
-# Initialize a list to store averaged results from each subject
+#%% Load beta medians per quantile from all subjects
+
+# Preallocate array for beta medians (subjects x eyes x hemispheres x 10 quantiles x 1)
 mat_data = np.zeros((len(subjects),2,2,10,1))
 
 # Loop through each folder
@@ -45,7 +54,7 @@ for s, subject in enumerate(subjects):
     folder_path = os.path.join(base_path, subject)
     mat_file_path = os.path.join(folder_path, 'CorrelationMtx_FC_beta_Params_subsampled.mat')
 
-    # Load the .mat file
+    # Load the .mat file (HDF5) and extract the beta median vectors for each eye and hemisphere
     data = h5py.File(mat_file_path, 'r')
     mat_data_eye1_lh = data['AnalysisParam']['betas_eye1_medians'][0,0]
     mat_data[s,0,0,:,:] = np.array(data[mat_data_eye1_lh])
@@ -55,12 +64,14 @@ for s, subject in enumerate(subjects):
     mat_data[s,1,0,:,:] = np.array(data[mat_data_eye2_lh])
     mat_data_eye2_rh = data['AnalysisParam']['betas_eye2_medians'][1,0]
     mat_data[s,1,1,:,:] = np.array(data[mat_data_eye2_rh])
-    
+
+#%% Average the absolute beta medians over eyes and hemispheres, then over subjects
+
 mean_data = np.mean(np.mean(np.abs(mat_data), axis=1), axis=1)
 
 mean_mean_data = np.mean(mean_data, axis=0)
 
-#%% positive quantiles
+#%% Plot labelled figure: beta medians per quantile
 
 # Create a figure for all subjects
 plt.figure(figsize=(10, 6))
@@ -106,6 +117,7 @@ if save_figures:
 plt.show()
 
 #%%
+#%% Plot clean version (no tick labels) for publication
 
 if save_figures:
     # Create a figure for all subjects
