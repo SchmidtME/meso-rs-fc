@@ -43,7 +43,7 @@ The repository is organised into five stages, executed in order:
 
 The analysis relies on several per-subject datasets:
 
-- **Raw resting-state fMRI runs** (magnitude data, `.nii`/`.mgh`), one or more runs.
+- **Raw resting-state fMRI runs** (magnitude data, `.nii`), one or more runs.
 - **Upsampled anatomical surfaces** (e.g. `*_anat_upsample_B1justsub`) with the
   inflated and flattened occipital patch surfaces.
 - **Retinotopy labels** defining V1 and its subregions (dorsal/ventral,
@@ -128,14 +128,14 @@ timeseries and percent-signal-change plots, cortical-depth statistics, subsampli
 | File | What it does |
 |------|--------------|
 | `A01_preproc_data_NORDIC.m` | Runs NORDIC thermal-noise denoising on raw fMRI magnitude data for each subject/run. |
-| `A02_preproc_data_FSFAST.m` | Full FSFAST pipeline: denoising, slice-timing, upsampling, registration, `preproc-sess`, layer (`mri_vol2surf`) sampling, intracortical smoothing, wm/motion covariate generation. |
+| `A02_preproc_data_FSFAST.m` | Full FSFAST pipeline: denoising, slice-timing correction, upsampling, registration, `preproc-sess`, layer (`mri_vol2surf`) sampling, intracortical smoothing, wm/motion covariate generation. |
 
 ### `processing/`
 
 | File | What it does |
 |------|--------------|
 | `A01_FC_Miner.m` | Analysis A driver: loops layers/subjects, calls `A001a` to compute rs-FC vs distance & ocular polarity (Fig 2). |
-| `A001a_FC_Proc_Data_subsample_beta.m` | Per-subject: loads ODC + rs data, detrends/high-passes, partial-correlation, beta/distance quantiles, subsampling; saves `CorrelationMtx_FC*` + subsample indices. |
+| `A001a_FC_Proc_Data_subsample_beta.m` | Per-subject: loads ODC + rs data, detrends/high-pass filters, partial-correlation, beta/distance quantiles, subsampling; saves `CorrelationMtx_FC*` + subsample indices. |
 | `B01_Selectivity_Miner.m` | Analysis B driver: loops layers/subjects; routes intra- vs inter-hemispheric to `B001a`/`B001b` (Figs 3–7). |
 | `B001a_Selectivity_Proc_Data.m` | Per-subject intra-hemispheric selectivity (alike/eye1/eye2/unalike rs-FC) per layer, ROI, beta quantiles; reuses A001a subsample indices; saves `CorrelationMtx_Selectivity*`. |
 | `B001b_Selectivity_Proc_Data_Interhemi.m` | Per-subject inter-hemispheric selectivity: partial-correlation between left and right hemisphere ROIs; saves `CorrelationMtx_Selectivity.mat`. |
