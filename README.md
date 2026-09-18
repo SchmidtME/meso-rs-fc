@@ -138,10 +138,7 @@ The pipeline uses several external software packages and libraries:
   (`fitrm`, `ranova`, `fitlme`).
 - **Python (v3.12)** with `numpy`, `scipy`, `matplotlib`, `seaborn`, `pandas`,
   `nibabel`, and `h5py`.
-- **NORDIC_Raw** (Moeller et al., 2021) for thermal-noise removal of the fMRI data.
-- In-house I/O helpers for FreeSurfer surface/NIfTI data (`read_surf`, `read_patch`,
-  `read_ROIlabel`, `load_nifti`, `load_mgh`, `highpass`, …) located in a separate
-  utility package (referenced via `addpath` / `sys.path.append` in the scripts).
+- **NORDIC** (Moeller et al., 2021) for thermal-noise removal of the fMRI data.
 
 ## License
 
