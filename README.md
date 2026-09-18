@@ -8,8 +8,7 @@ human primary visual cortex using high-resolution functional MRI.* bioRxiv.
 DOI: <https://doi.org/10.1101/2025.03.27.645795>
 
 The pipeline analyses high-resolution 7T resting-state fMRI data to investigate how
-**resting-state functional connectivity (rs-FC)** within and between the primary
-visual cortices (V1) depends on:
+**resting-state functional connectivity (rs-FC)** within the primary visual cortex (V1) depends on:
 
 - **Cortical distance** between vertices,
 - **Ocular polarity** — whether connected vertex pairs prefer the same eye
@@ -17,7 +16,7 @@ visual cortices (V1) depends on:
 - **Cortical depth** (layers, e.g. superficial / middle / deep),
 - **V1 subregions** (dorsal/ventral, central/peripheral),
 - and whether rs-FC spatial patterns relate to the **ocular dominance column (ODC)**
-  maps derived from population receptive-field / monocular stimulation data.
+  maps derived from fMRI during dichoptic stimulation.
 
 The repository is organised into five sequential stages. Code is a mix of MATLAB
 (preprocessing, processing, statistics) and Python (plotting + some control analyses).
